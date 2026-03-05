@@ -1,0 +1,272 @@
+{% extends "base.html" %}
+{% block content %}
+
+<style>
+    .file-detail-card {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+
+    .file-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .info-item {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 1.5rem;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .info-label {
+        color: var(--text-secondary);
+        font-size: 0.875rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 0.5rem;
+    }
+
+    .info-value {
+        color: var(--text-primary);
+        font-size: 1.125rem;
+        font-weight: 500;
+        word-wrap: break-word;
+    }
+
+    .qr-code-container {
+        background: rgba(255, 255, 255, 0.05);
+        padding: 2rem;
+        border-radius: 12px;
+        text-align: center;
+        border: 1px solid var(--border-color);
+    }
+
+    .qr-usage-badge {
+        display: inline-block;
+        background: linear-gradient(135deg, rgba(0, 255, 136, 0.2), rgba(0, 212, 255, 0.2));
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        margin-top: 1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+
+    .qr-usage-badge:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
+    }
+
+    .file-preview {
+        max-width: 100%;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .btn-quantum {
+        background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .btn-quantum:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        color: white;
+    }
+</style>
+
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <!-- Header -->
+            <div class="mb-4">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{{ url_for('dashboard') }}">Dashboard</a></li>
+                        <li class="breadcrumb-item"><a href="{{ url_for('files_list') }}">Files</a></li>
+                        <li class="breadcrumb-item active">{{ file['original_filename'] }}</li>
+                    </ol>
+                </nav>
+                <h2 class="quantum-text mb-2">
+                    <i class="fas fa-file-alt me-2"></i>{{ file['original_filename'] }}
+                </h2>
+                <p class="text-secondary">Uploaded on {{ file['uploaded_at'][:10] if file['uploaded_at'] else 'Unknown' }}</p>
+            </div>
+
+            <!-- File Details Card -->
+            <div class="file-detail-card">
+                <h4 class="mb-3"><i class="fas fa-info-circle me-2"></i>File Information</h4>
+                
+                <div class="file-info-grid">
+                    <div class="info-item">
+                        <div class="info-label">File ID</div>
+                        <div class="info-value">{{ file['file_id'][:16] }}...</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Filename</div>
+                        <div class="info-value">{{ file['original_filename'] }}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Keywords</div>
+                        <div class="info-value">{{ file['keywords'] or 'None' }}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Encryption Key Hash</div>
+                        <div class="info-value" style="font-family: monospace; font-size: 0.875rem;">
+                            {{ file['key_hash'][:16] if file['key_hash'] else 'N/A' }}...
+                        </div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Owner</div>
+                        <div class="info-value">{{ file['owner_name'] }}</div>
+                    </div>
+                    
+                    <div class="info-item">
+                        <div class="info-label">Upload Date</div>
+                        <div class="info-value">{{ file['uploaded_at'][:10] if file['uploaded_at'] else 'Unknown' }}</div>
+                    </div>
+                </div>
+
+                {% if file['description'] %}
+                <div class="mt-3">
+                    <div class="info-label">Description</div>
+                    <p class="text-secondary">{{ file['description'] }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- QR Code Section -->
+            {% if qr_path %}
+            <div class="qr-code-container mb-4">
+                <h4 class="mb-3"><i class="fas fa-qrcode me-2"></i>QR Code for File Access</h4>
+                <img src="{{ url_for('static', filename=qr_path) }}" 
+                     alt="QR Code" class="file-preview" style="max-width: 300px;">
+                <p class="text-secondary mt-3">Scan this QR code to request access to this file</p>
+                <div class="qr-usage-badge" data-bs-toggle="modal" data-bs-target="#qrUsageModal">
+                    <i class="fas fa-question-circle me-2"></i>How to use this QR code?
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- File Type Info -->
+            <div class="card-quantum p-4 mb-4">
+                <h4 class="mb-3"><i class="fas fa-lock me-2"></i>Encryption Details</h4>
+                <p><strong>File Type:</strong> {{ file['file_type'] or 'Unknown' }}</p>
+                <p><strong>File Size:</strong> {{ "%.2f"|format(file['file_size'] / 1024) if file['file_size'] else 0 }} KB</p>
+                <p><strong>Error Rate:</strong> {{ "%.4f"|format(file['error_rate']) if file['error_rate'] else 'N/A' }}</p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{{ url_for('download_file', file_id=file['file_id']) }}" class="btn btn-quantum">
+                    <i class="fas fa-download me-2"></i>Download File
+                </a>
+                <a href="{{ url_for('decrypt_file') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-unlock me-2"></i>Decrypt File
+                </a>
+                {% if is_owner %}
+                <form action="{{ url_for('delete_file', file_id=file['file_id']) }}" method="POST" 
+                      style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this file? This action cannot be undone.');">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash me-2"></i>Delete File
+                    </button>
+                </form>
+                {% endif %}
+                <a href="{{ url_for('files_list') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Files
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code Usage Modal -->
+<div class="modal fade" id="qrUsageModal" tabindex="-1" aria-labelledby="qrUsageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content" style="background: var(--card-bg); border: 1px solid var(--border-color);">
+            <div class="modal-header" style="border-bottom: 1px solid var(--border-color);">
+                <h5 class="modal-title" id="qrUsageModalLabel">
+                    <i class="fas fa-qrcode me-2" style="color: var(--accent-green);"></i>
+                    How to Use QR Code for File Access
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" style="filter: invert(1);"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert" style="background: rgba(0, 255, 136, 0.1); border-color: rgba(0, 255, 136, 0.3); color: var(--text-primary);">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>QR Code Purpose:</strong> Share secure file access with others via quantum-encrypted channels
+                </div>
+
+                <h6 class="mb-3" style="color: var(--accent-blue);"><i class="fas fa-mobile-alt me-2"></i>Step-by-Step Process:</h6>
+                <ol class="list-group list-group-flush" style="background: transparent;">
+                    <li class="list-group-item" style="background: transparent; border-color: var(--border-color); color: var(--text-primary);">
+                        <strong style="color: var(--accent-green);">Step 1: Share QR Code</strong><br>
+                        <small class="text-secondary">Download or screenshot the QR code and share it with the person who needs file access</small>
+                    </li>
+                    <li class="list-group-item" style="background: transparent; border-color: var(--border-color); color: var(--text-primary);">
+                        <strong style="color: var(--accent-blue);">Step 2: User Scans QR Code</strong><br>
+                        <small class="text-secondary">Recipient opens their phone camera or QR scanner app and scans the code</small>
+                    </li>
+                    <li class="list-group-item" style="background: transparent; border-color: var(--border-color); color: var(--text-primary);">
+                        <strong style="color: var(--accent-purple);">Step 3: Access Request Form Opens</strong><br>
+                        <small class="text-secondary">QR code opens a web form where they enter their registered email address</small>
+                    </li>
+                    <li class="list-group-item" style="background: transparent; border-color: var(--border-color); color: var(--text-primary);">
+                        <strong style="color: var(--accent-green);">Step 4: You Approve Request</strong><br>
+                        <small class="text-secondary">You receive a notification and can approve/reject their access request</small>
+                    </li>
+                    <li class="list-group-item" style="background: transparent; border-color: var(--border-color); color: var(--text-primary);">
+                        <strong style="color: var(--accent-blue);">Step 5: Quantum Key Delivered</strong><br>
+                        <small class="text-secondary">Upon approval, they receive the quantum decryption key via email</small>
+                    </li>
+                    <li class="list-group-item" style="background: transparent; border-color: var(--border-color); color: var(--text-primary);">
+                        <strong style="color: var(--accent-purple);">Step 6: File Decryption</strong><br>
+                        <small class="text-secondary">They use the File ID and quantum key to decrypt and download the file</small>
+                    </li>
+                </ol>
+
+                <div class="alert alert-warning mt-3" style="background: rgba(255, 193, 7, 0.1); border-color: rgba(255, 193, 7, 0.3);">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    <strong>Security Note:</strong> Only share QR codes with trusted individuals. Each access request requires your explicit approval.
+                </div>
+
+                <h6 class="mb-3 mt-4" style="color: var(--accent-green);"><i class="fas fa-check-circle me-2"></i>Benefits:</h6>
+                <ul style="color: var(--text-secondary);">
+                    <li>✅ No need to manually share file IDs or long URLs</li>
+                    <li>✅ Quantum-encrypted security throughout the process</li>
+                    <li>✅ You maintain full control - approve each access request</li>
+                    <li>✅ Automatic key delivery via secure email</li>
+                    <li>✅ Audit trail of all access requests</li>
+                </ul>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid var(--border-color);">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Got it!</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

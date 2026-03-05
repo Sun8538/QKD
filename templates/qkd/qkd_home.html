@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}QKD Keys - Quantum IoT Security{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Quantum Key Distribution</h2>
+            <p class="text-secondary mb-0">Manage your quantum-generated encryption keys</p>
+        </div>
+        <a href="{{ url_for('qkd_generate') }}" class="btn btn-quantum">
+            <i class="fas fa-plus me-2"></i>Generate New Key
+        </a>
+    </div>
+
+    <!-- Active Keys -->
+    <div class="card-quantum">
+        <div class="card-header-quantum">
+            <h5 class="mb-0">
+                <i class="fas fa-key me-2"></i>Your Quantum Keys
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            {% if keys %}
+            <div class="table-responsive">
+                <table class="table table-quantum mb-0">
+                    <thead>
+                        <tr>
+                            <th>Key ID</th>
+                            <th>Key Hash</th>
+                            <th>Error Rate</th>
+                            <th>Type</th>
+                            <th>Created</th>
+                            <th>Expires</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key in keys %}
+                        <tr>
+                            <td>
+                                <code class="text-info">{{ key['key_id'][:8] }}...</code>
+                            </td>
+                            <td>
+                                <span class="key-display" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
+                                    {{ key['key_hash'] }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="{% if key['error_rate'] < 0.05 %}text-success{% elif key['error_rate'] < 0.1 %}text-warning{% else %}text-danger{% endif %}">
+                                    {{ "%.2f"|format(key['error_rate'] * 100) }}%
+                                </span>
+                            </td>
+                            <td>
+                                <span class="badge badge-quantum badge-primary">{{ key['key_type'] }}</span>
+                            </td>
+                            <td>{{ key['created_at'][:16] }}</td>
+                            <td>{{ key['expires_at'][:16] if key['expires_at'] else 'N/A' }}</td>
+                            <td>
+                                {% if key['is_active'] %}
+                                <span class="badge badge-quantum badge-success">Active</span>
+                                {% else %}
+                                <span class="badge badge-quantum badge-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('qkd_visualize', key_id=key['key_id']) }}" 
+                                       class="btn btn-outline-info" title="Visualize">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <button class="btn btn-outline-warning refresh-key-btn" 
+                                            data-key-id="{{ key['key_id'] }}" title="Refresh">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                    <button class="btn btn-outline-success send-key-btn" 
+                                            data-key-id="{{ key['key_id'] }}" title="Send via Email">
+                                        <i class="fas fa-envelope"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-key fa-4x text-secondary mb-3"></i>
+                <h5>No Quantum Keys Yet</h5>
+                <p class="text-secondary">Generate your first quantum key to get started</p>
+                <a href="{{ url_for('qkd_generate') }}" class="btn btn-quantum">
+                    <i class="fas fa-plus me-2"></i>Generate Key
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Info Cards -->
+    <div class="row g-4 mt-4">
+        <div class="col-md-4">
+            <div class="card-quantum p-4 h-100">
+                <div class="text-center mb-3">
+                    <i class="fas fa-shield-alt fa-2x" style="color: #667eea;"></i>
+                </div>
+                <h5 class="text-center">BB84 Protocol</h5>
+                <p class="text-secondary text-center mb-0 small">
+                    Your keys are generated using the BB84 quantum key distribution protocol, 
+                    ensuring unconditional security against eavesdropping.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-quantum p-4 h-100">
+                <div class="text-center mb-3">
+                    <i class="fas fa-sync-alt fa-2x" style="color: #00ff88;"></i>
+                </div>
+                <h5 class="text-center">Auto Refresh</h5>
+                <p class="text-secondary text-center mb-0 small">
+                    Keys are automatically refreshed every 5 minutes to prevent replay attacks 
+                    and maintain forward secrecy.
+                </p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card-quantum p-4 h-100">
+                <div class="text-center mb-3">
+                    <i class="fas fa-robot fa-2x" style="color: #f093fb;"></i>
+                </div>
+                <h5 class="text-center">AI Management</h5>
+                <p class="text-secondary text-center mb-0 small">
+                    Our AI assistant monitors key health and provides optimal rotation 
+                    recommendations for maximum security.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Key Modal -->
+<div class="modal fade" id="sendKeyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: var(--card-bg); border-color: var(--border-color);">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">
+                    <i class="fas fa-envelope me-2"></i>Send Quantum Key via Email
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="sendKeyId">
+                <div class="mb-3">
+                    <label class="form-label">Recipient Email</label>
+                    <input type="email" id="recipientEmail" class="form-control form-control-quantum" 
+                           placeholder="Enter recipient's email">
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-quantum" id="confirmSendKey">
+                    <i class="fas fa-paper-plane me-2"></i>Send Key
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Refresh key
+    $('.refresh-key-btn').click(function() {
+        const keyId = $(this).data('key-id');
+        const btn = $(this);
+        
+        if (confirm('Refresh this quantum key? The old key will be deactivated.')) {
+            btn.prop('disabled', true).find('i').addClass('fa-spin');
+            
+            $.ajax({
+                url: `/api/keys/refresh/${keyId}`,
+                method: 'POST',
+                contentType: 'application/json',
+                success: function(response) {
+                    if (response.success) {
+                        alert('Key refreshed successfully!');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.error);
+                    }
+                },
+                error: function() {
+                    alert('Failed to refresh key');
+                },
+                complete: function() {
+                    btn.prop('disabled', false).find('i').removeClass('fa-spin');
+                }
+            });
+        }
+    });
+    
+    // Send key modal
+    $('.send-key-btn').click(function() {
+        $('#sendKeyId').val($(this).data('key-id'));
+        new bootstrap.Modal('#sendKeyModal').show();
+    });
+    
+    // Confirm send key
+    $('#confirmSendKey').click(function() {
+        const keyId = $('#sendKeyId').val();
+        const email = $('#recipientEmail').val();
+        
+        if (!email) {
+            alert('Please enter recipient email');
+            return;
+        }
+        
+        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Sending...');
+        
+        $.ajax({
+            url: `/api/keys/send-email/${keyId}`,
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ email: email }),
+            success: function(response) {
+                if (response.success) {
+                    alert('Key sent successfully!');
+                    bootstrap.Modal.getInstance('#sendKeyModal').hide();
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function() {
+                alert('Failed to send key');
+            },
+            complete: function() {
+                $('#confirmSendKey').prop('disabled', false).html('<i class="fas fa-paper-plane me-2"></i>Send Key');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

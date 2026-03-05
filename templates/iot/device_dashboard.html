@@ -1,0 +1,652 @@
+{% extends "base.html" %}
+{% block title %}IoT Devices - Quantum IoT Security{% endblock %}
+
+{% block extra_css %}
+<style>
+    .device-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 15px;
+        padding: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    .device-card:hover { border-color: #667eea; transform: translateY(-3px); }
+
+    .device-icon {
+        width: 48px; height: 48px;
+        border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.4rem;
+    }
+
+    .telemetry-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    .tele-item {
+        background: rgba(102,126,234,0.08);
+        border-radius: 10px;
+        padding: 0.75rem;
+        text-align: center;
+    }
+    .tele-value { font-size: 1.1rem; font-weight: 700; color: var(--accent-green); }
+    .tele-label { font-size: 0.7rem; color: var(--text-secondary); margin-top: 0.2rem; }
+
+    .status-dot {
+        width: 10px; height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 6px;
+    }
+    .status-online  { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+    .status-offline { background: #555; }
+
+    .register-card {
+        background: linear-gradient(135deg, rgba(102,126,234,0.12), rgba(118,75,162,0.12));
+        border: 1px dashed rgba(102,126,234,0.4);
+        border-radius: 15px;
+        padding: 2rem;
+    }
+
+    .qr-section {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 1rem;
+        text-align: center;
+    }
+
+    /* Live feed table styling */
+    [id^="live-feed-"] .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    [id^="live-feed-"] table {
+        min-width: 1100px;
+    }
+    [id^="live-feed-"] thead th {
+        color: #ffc107 !important;
+        font-size: 0.72rem;
+        font-weight: 700;
+        white-space: nowrap;
+        padding: 0.5rem 0.4rem;
+        background: rgba(102, 126, 234, 0.15) !important;
+        border-bottom: 2px solid #667eea;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+    [id^="live-feed-"] tbody td {
+        color: #e8e8f0 !important;
+        font-size: 0.78rem;
+        white-space: nowrap;
+        padding: 0.4rem;
+        border-bottom: 1px solid rgba(42,42,74,0.6);
+    }
+    [id^="live-feed-"] tbody tr:hover {
+        background: rgba(102,126,234,0.08);
+    }
+
+    /* API Key display box */
+    .apikey-box {
+        background: linear-gradient(135deg, #1a1a2e, #0f0f23);
+        border: 1.5px solid #00ff88;
+        border-radius: 10px;
+        padding: 0.9rem 1rem;
+        font-family: monospace;
+        font-size: 0.82rem;
+        color: #00ff88;
+        word-break: break-all;
+        letter-spacing: 0.04em;
+        text-shadow: 0 0 6px rgba(0,255,136,0.4);
+        user-select: all;
+        cursor: text;
+    }
+
+    /* QKD status badges */
+    .qkd-badge { border-radius: 20px; padding: 0.25rem 0.7rem; font-size: 0.72rem; font-weight: 600; }
+    .qkd-badge-active   { background: rgba(0,255,136,0.15); color: #00ff88; border: 1px solid rgba(0,255,136,0.3); }
+    .qkd-badge-inactive { background: rgba(255,193,7,0.15);  color: #ffc107; border: 1px solid rgba(255,193,7,0.3); }
+
+    /* Encrypted payload display */
+    .enc-tele-item {
+        grid-column: 1 / -1;
+        background: rgba(118,75,162,0.1);
+        border: 1px solid rgba(118,75,162,0.25);
+        border-radius: 10px;
+        padding: 0.75rem;
+    }
+    .enc-cipher-text, .enc-decrypted-text {
+        font-family: monospace;
+        font-size: 0.72rem;
+        word-break: break-all;
+        max-height: 48px;
+        overflow: hidden;
+    }
+    .enc-cipher-text    { color: #f093fb; }
+    .enc-decrypted-text { color: #00ff88; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="row mb-4 align-items-center">
+        <div class="col">
+            <h2 class="mb-1"><i class="fas fa-microchip me-2" style="color:#667eea;"></i>IoT Devices</h2>
+            <p class="text-secondary mb-0">Register your mobile phone as a real-time sensor device</p>
+        </div>
+        <div class="col-auto">
+            <button class="btn btn-quantum" data-bs-toggle="modal" data-bs-target="#registerModal">
+                <i class="fas fa-plus me-2"></i>Register Device
+            </button>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-quantum alert-{{ category }} alert-dismissible fade show">
+            {{ message | safe }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    {% endif %}
+    {% endwith %}
+
+    {# ===== API Key Reveal Modal — auto-shown once after device registration ===== #}
+    {% if new_api_key %}
+    <div class="modal fade" id="apiKeyModal" tabindex="-1"
+         data-bs-backdrop="static" data-bs-keyboard="false"
+         aria-labelledby="apiKeyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="background: var(--card-bg); border: 2px solid #00ff88;">
+                <div class="modal-header" style="border-color: rgba(0,255,136,0.3);">
+                    <h5 class="modal-title" style="color:#00ff88;" id="apiKeyModalLabel">
+                        <i class="fas fa-key me-2"></i>Device API Key
+                        &mdash; <strong>{{ new_device_name }}</strong>
+                    </h5>
+                </div>
+                <div class="modal-body">
+                    <div class="alert" style="background:rgba(255,193,7,0.1);border:1px solid #ffc107;border-radius:10px;">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>
+                        <strong class="text-warning">Copy this key now.</strong>
+                        It will never be shown again — the server only stores a hash.
+                    </div>
+                    <label class="form-label small text-secondary">Your API Key (click to select all):</label>
+                    <div class="apikey-box" id="apiKeyValue" onclick="selectApiKey()" title="Click to select all">
+                        {{ new_api_key }}
+                    </div>
+                    <div class="d-flex gap-2 mt-3">
+                        <button class="btn btn-quantum flex-grow-1" onclick="copyApiKey()">
+                            <i class="fas fa-copy me-2" id="copyIcon"></i>
+                            <span id="copyLabel">Copy API Key</span>
+                        </button>
+                        <button class="btn btn-outline-secondary" onclick="downloadApiKey()" title="Download as text file">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                    <hr style="border-color:var(--border-color);">
+                    <div class="small text-secondary">
+                        <strong>How to use:</strong><br>
+                        1. Copy the sensor URL from your device card below<br>
+                        2. Open it on your phone (same WiFi network)<br>
+                        3. Paste this key into the &ldquo;API Key&rdquo; field and tap Start<br>
+                        4. Return here &rarr; click <em>Run QKD Demo</em> to quantum-encrypt the data
+                    </div>
+                    <hr style="border-color:var(--border-color);">
+                    <div class="small">
+                        <i class="fas fa-link me-1" style="color:#667eea;"></i>
+                        <strong>Sensor URL on your phone:</strong><br>
+                        {% if new_device_uuid %}
+                        <code style="color:#00b4d8;font-size:0.78rem;word-break:break-all;">
+                            https://{{ local_ip }}:{{ sensor_port }}{{ url_for('mobile_sensor_page', device_id=new_device_uuid) }}
+                        </code>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-color: rgba(0,255,136,0.3);">
+                    <button type="button" class="btn btn-quantum" data-bs-dismiss="modal">
+                        <i class="fas fa-check me-2"></i>I&rsquo;ve saved my key &mdash; Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if devices %}
+    <div class="row g-4">
+        {% for device in devices %}
+        {% set t = latest.get(device['id']) %}
+        <div class="col-12 col-lg-6" id="device-card-{{ device['id'] }}">
+            <div class="device-card">
+                <!-- Card Header -->
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="device-icon text-white"
+                             style="background: linear-gradient(135deg,#667eea,#764ba2);">
+                            <i class="fas {% if device['device_type'] == 'mobile' %}fa-mobile-alt{% else %}fa-laptop{% endif %}"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">{{ device['device_name'] }}</h5>
+                            <small class="text-secondary">{{ device['device_type'] | capitalize }}</small>
+                        </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="status-{{ device['id'] }}">
+                            {% if not device['is_active'] %}
+                            <span class="status-dot" style="background:#f44;box-shadow:0 0 6px #f44;"></span>
+                            <small class="text-danger">Deactivated</small>
+                            {% elif device['last_seen'] %}
+                            <span class="status-dot status-online"></span>
+                            <small class="text-success">Active</small>
+                            {% else %}
+                            <span class="status-dot status-offline"></span>
+                            <small class="text-secondary">Never connected</small>
+                            {% endif %}
+                        </span>
+                        <!-- Deactivate / Activate toggle -->
+                        <form method="POST" action="{{ url_for('toggle_iot_device_active', device_db_id=device['id']) }}"
+                              onsubmit="return confirm('{{ 'Activate' if not device['is_active'] else 'Deactivate' }} this device?')" style="display:inline;">
+                            <button type="submit" class="btn btn-sm {{ 'btn-outline-success' if not device['is_active'] else 'btn-outline-warning' }} ms-1" title="{{ 'Activate' if not device['is_active'] else 'Deactivate' }}">
+                                <i class="fas {{ 'fa-toggle-on' if not device['is_active'] else 'fa-toggle-off' }}"></i>
+                            </button>
+                        </form>
+                        <!-- Permanent Delete -->
+                        <form method="POST" action="{{ url_for('delete_iot_device', device_db_id=device['id']) }}"
+                              onsubmit="return confirm('Permanently DELETE this device and all its telemetry data? This cannot be undone.')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger ms-1" title="Delete permanently">
+                                <i class="fas fa-trash-alt"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- QKD Key Status + Demo Button -->
+                <div class="mt-2 d-flex align-items-center gap-2 flex-wrap">
+                    {% if device['quantum_key'] %}
+                    <span class="qkd-badge qkd-badge-active">
+                        <i class="fas fa-atom me-1"></i>QKD Key Active
+                    </span>
+                    {% else %}
+                    <span class="qkd-badge qkd-badge-inactive">
+                        <i class="fas fa-clock me-1"></i>No Quantum Key
+                    </span>
+                    {% endif %}
+                    <a href="{{ url_for('iot_qkd_demo', device_db_id=device['id']) }}"
+                       class="btn btn-sm btn-outline-quantum" style="font-size:0.72rem;">
+                        <i class="fas fa-atom me-1"></i>
+                        {% if device['quantum_key'] %}Re-run QKD Demo{% else %}Run QKD Handshake{% endif %}
+                    </a>
+                </div>
+
+                <!-- Mobile sensor URL -->
+                <div class="mt-3">
+                    <label class="form-label small text-secondary mb-1">
+                        <i class="fas fa-link me-1"></i>Open on phone (same WiFi):
+                    </label>
+                    <div class="input-group input-group-sm">
+                        <input type="text" class="form-control form-control-quantum sensor-url"
+                               id="url-{{ device['id'] }}"
+                               value="https://{{ local_ip }}:{{ sensor_port }}{{ url_for('mobile_sensor_page', device_id=device['device_id']) }}"
+                               readonly>
+                        <button class="btn btn-outline-quantum" type="button"
+                                onclick="copyUrl('url-{{ device['id'] }}')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                    <small class="text-secondary">
+                        <i class="fas fa-wifi me-1"></i>Same WiFi required.
+                        <i class="fas fa-shield-alt ms-2 me-1" style="color:#ffc107;"></i>
+                        Phone will show a certificate warning — tap <strong>Advanced → Proceed</strong>.
+                    </small>
+                </div>
+
+                <!-- Latest Telemetry -->
+                <div class="telemetry-grid" id="tele-{{ device['id'] }}">
+                    {% if t %}
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['accel_x'] is not none %}
+                            {{ '%.2f'|format(t['accel_x']) }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Accel X (m/s²)</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['accel_y'] is not none %}
+                            {{ '%.2f'|format(t['accel_y']) }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Accel Y (m/s²)</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['accel_z'] is not none %}
+                            {{ '%.2f'|format(t['accel_z']) }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Accel Z (m/s²)</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['gyro_x'] is not none %}
+                            {{ '%.2f'|format(t['gyro_x']) }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Gyro α (°/s)</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['gyro_y'] is not none %}
+                            {{ '%.2f'|format(t['gyro_y']) }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Gyro β (°/s)</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['gyro_z'] is not none %}
+                            {{ '%.2f'|format(t['gyro_z']) }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Gyro γ (°/s)</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['orientation_alpha'] is not none %}
+                            {{ '%.0f'|format(t['orientation_alpha']) }}°
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Orient α</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['orientation_beta'] is not none %}
+                            {{ '%.0f'|format(t['orientation_beta']) }}°
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Orient β</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['orientation_gamma'] is not none %}
+                            {{ '%.0f'|format(t['orientation_gamma']) }}°
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Orient γ</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['latitude'] is not none %}
+                            {{ '%.4f'|format(t['latitude']) }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Latitude</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['longitude'] is not none %}
+                            {{ '%.4f'|format(t['longitude']) }}
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Longitude</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['altitude'] is not none %}
+                            {{ '%.1f'|format(t['altitude']) }}m
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Altitude</div>
+                    </div>
+                    <div class="tele-item">
+                        <div class="tele-value">
+                            {% if t['battery_level'] is not none %}
+                            {{ '%.0f'|format(t['battery_level'] * 100) }}%
+                            {% else %}—{% endif %}
+                        </div>
+                        <div class="tele-label">Battery</div>
+                    </div>
+                    {% if t['encrypted_payload'] %}
+                    <div class="enc-tele-item">
+                        <div class="small mb-1" style="color:var(--text-secondary);">
+                            <i class="fas fa-lock me-1" style="color:#f093fb;"></i>Last QKD-Encrypted packet:
+                        </div>
+                        <div class="enc-cipher-text">{{ t['encrypted_payload'][:120] }}…</div>
+                        <div class="small mt-1 mb-1" style="color:var(--text-secondary);">
+                            <i class="fas fa-lock-open me-1" style="color:#00ff88;"></i>Raw data (decrypted server-side):
+                        </div>
+                        <div class="enc-decrypted-text">{{ t['raw_payload'][:120] if t['raw_payload'] else '…' }}</div>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="text-center text-secondary py-3 col-span-all" style="grid-column: 1/-1;">
+                        <i class="fas fa-satellite-dish fa-lg mb-2"></i>
+                        <p class="small mb-0">No telemetry yet — open the sensor page on your phone</p>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Live feed button -->
+                <div class="mt-3 d-flex gap-2">
+                    <button class="btn btn-sm btn-outline-quantum"
+                            onclick="toggleLiveFeed({{ device['id'] }})">
+                        <i class="fas fa-broadcast-tower me-1"></i>Live Feed
+                    </button>
+                    <small class="text-secondary my-auto">
+                        Registered: {{ device['registered_at'][:10] if device['registered_at'] else '' }}
+                    </small>
+                </div>
+
+                <!-- Live feed table (hidden by default) -->
+                <div id="live-feed-{{ device['id'] }}" class="mt-3 d-none">
+                    <div class="table-responsive">
+                        <table class="table table-quantum table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time (IST)</th>
+                                    <th>Acc X</th><th>Acc Y</th><th>Acc Z</th>
+                                    <th>Gyro α</th><th>Gyro β</th><th>Gyro γ</th>
+                                    <th>Ori α</th><th>Ori β</th><th>Ori γ</th>
+                                    <th>Lat</th><th>Lng</th><th>Alt</th>
+                                    <th>Bat</th>
+                                    <th title="QKD Encrypted">🔐</th>
+                                </tr>
+                            </thead>
+                            <tbody id="live-table-{{ device['id'] }}">
+                                <tr><td colspan="15" class="text-center text-secondary">Loading…</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <!-- Empty state -->
+    <div class="register-card text-center py-5">
+        <i class="fas fa-mobile-alt fa-4x mb-3" style="color:#667eea;"></i>
+        <h4>No devices registered yet</h4>
+        <p class="text-secondary mb-4">
+            Register your mobile phone to start streaming real sensor data<br>
+            (accelerometer, gyroscope, GPS, battery) to this dashboard over your local WiFi.
+        </p>
+        <button class="btn btn-quantum btn-lg" data-bs-toggle="modal" data-bs-target="#registerModal">
+            <i class="fas fa-plus me-2"></i>Register Your Phone
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Register Device Modal -->
+<div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: var(--card-bg); border-color: var(--border-color);">
+            <div class="modal-header" style="border-color: var(--border-color);">
+                <h5 class="modal-title text-light" id="registerModalLabel">
+                    <i class="fas fa-mobile-alt me-2"></i>Register New Device
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('register_iot_device') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Device Name</label>
+                        <input type="text" name="device_name" class="form-control form-control-quantum"
+                               placeholder="e.g. My Android Phone" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Device Type</label>
+                        <select name="device_type" class="form-select form-control-quantum">
+                            <option value="mobile">Mobile Phone</option>
+                            <option value="tablet">Tablet</option>
+                            <option value="pc">PC / Laptop</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-quantum alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        After registration you will receive a <strong>one-time API key</strong>.
+                        Copy it immediately — it cannot be shown again.
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-color: var(--border-color);">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-quantum">
+                        <i class="fas fa-check me-2"></i>Register
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function copyUrl(inputId) {
+    const el = document.getElementById(inputId);
+    el.select();
+    document.execCommand('copy');
+    // brief visual feedback
+    el.style.borderColor = '#00ff88';
+    setTimeout(() => { el.style.borderColor = ''; }, 1200);
+}
+
+const liveIntervals = {};
+
+function toggleLiveFeed(deviceId) {
+    const feed = document.getElementById('live-feed-' + deviceId);
+    feed.classList.toggle('d-none');
+    if (!feed.classList.contains('d-none')) {
+        fetchLive(deviceId);
+        liveIntervals[deviceId] = setInterval(() => fetchLive(deviceId), 3000);
+    } else {
+        clearInterval(liveIntervals[deviceId]);
+        delete liveIntervals[deviceId];
+    }
+}
+
+function fetchLive(deviceId) {
+    fetch('/api/iot/devices/' + deviceId + '/telemetry')
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success) return;
+            const tbody = document.getElementById('live-table-' + deviceId);
+            if (!data.telemetry.length) {
+                tbody.innerHTML = '<tr><td colspan="15" class="text-center text-secondary">No data yet</td></tr>';
+                return;
+            }
+            tbody.innerHTML = data.telemetry.slice(0, 20).map(t => `
+                <tr>
+                    <td>${toIST(t.timestamp)}</td>
+                    <td>${fmt(t.accel_x)}</td>
+                    <td>${fmt(t.accel_y)}</td>
+                    <td>${fmt(t.accel_z)}</td>
+                    <td>${fmt(t.gyro_x)}</td>
+                    <td>${fmt(t.gyro_y)}</td>
+                    <td>${fmt(t.gyro_z)}</td>
+                    <td>${fmt(t.orientation_alpha)}</td>
+                    <td>${fmt(t.orientation_beta)}</td>
+                    <td>${fmt(t.orientation_gamma)}</td>
+                    <td>${fmt4(t.latitude)}</td>
+                    <td>${fmt4(t.longitude)}</td>
+                    <td>${t.altitude!=null ? parseFloat(t.altitude).toFixed(1) : '—'}</td>
+                    <td>${t.battery_level!=null ? Math.round(t.battery_level*100)+'%' : '—'}</td>
+                    <td>${t.encrypted_payload
+                            ? '<span style="color:#f093fb;" title="'+escHtml((t.encrypted_payload||'').slice(0,80))+'…">🔐</span>'
+                            : '<span class="text-secondary" title="No QKD key active">—</span>'}</td>
+                </tr>`).join('');
+        })
+        .catch(() => {});
+}
+
+function fmt(v)   { return v != null ? parseFloat(v).toFixed(2) : '—'; }
+function fmt4(v)  { return v != null ? parseFloat(v).toFixed(4) : '—'; }
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+
+/** Convert a UTC timestamp string to IST (UTC+5:30) time display */
+function toIST(ts) {
+    if (!ts) return '—';
+    // Parse the timestamp as UTC (server stores in UTC)
+    const d = new Date(ts + (ts.includes('Z') || ts.includes('+') ? '' : 'Z'));
+    // Format in IST timezone
+    return d.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+// ── API Key Modal helpers ─────────────────────────────────────────────────────
+{% if new_api_key %}
+document.addEventListener('DOMContentLoaded', () => {
+    new bootstrap.Modal(document.getElementById('apiKeyModal'), {}).show();
+});
+{% endif %}
+
+function selectApiKey() {
+    const el = document.getElementById('apiKeyValue');
+    if (!el) return;
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+}
+
+function copyApiKey() {
+    const key = (document.getElementById('apiKeyValue') || {}).textContent || '';
+    navigator.clipboard.writeText(key.trim()).then(() => {
+        document.getElementById('copyIcon').className = 'fas fa-check me-2';
+        document.getElementById('copyLabel').textContent = 'Copied!';
+        setTimeout(() => {
+            document.getElementById('copyIcon').className = 'fas fa-copy me-2';
+            document.getElementById('copyLabel').textContent = 'Copy API Key';
+        }, 2500);
+    }).catch(() => { selectApiKey(); document.execCommand('copy'); });
+}
+
+function downloadApiKey() {
+    const key  = (document.getElementById('apiKeyValue') || {}).textContent || '';
+    const name = '{{ new_device_name | default("device") | replace(" ","_") }}';
+    {% if new_device_uuid %}
+    const sensorUrl = 'https://{{ local_ip }}:{{ sensor_port }}{{ url_for("mobile_sensor_page", device_id=new_device_uuid) }}';
+    {% else %}
+    const sensorUrl = 'https://{{ local_ip }}:{{ sensor_port }}/';
+    {% endif %}
+    const text = 'Device: ' + name + '\nAPI Key: ' + key.trim() +
+                 '\nSensor URL: ' + sensorUrl +
+                 '\n\nSteps:\n1. Open the Sensor URL on your phone (same WiFi)' +
+                 '\n2. Paste the API Key above and tap Start' +
+                 '\n3. Return to the dashboard and click Run QKD Demo' +
+                 '\n\nKeep this file secure.\n';
+    const blob = new Blob([text], {type:'text/plain'});
+    const a    = document.createElement('a');
+    a.href     = URL.createObjectURL(blob);
+    a.download = 'iot_key_' + name + '.txt';
+    a.click();
+}
+</script>
+{% endblock %}

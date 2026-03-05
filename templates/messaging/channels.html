@@ -1,0 +1,304 @@
+{% extends "base.html" %}
+{% block title %}Channels - Quantum IoT Security{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">Quantum Channels</h2>
+            <p class="text-secondary mb-0">Secure Pub/Sub messaging with QKD encryption</p>
+        </div>
+        <a href="{{ url_for('create_channel') }}" class="btn btn-quantum">
+            <i class="fas fa-plus me-2"></i>Create Channel
+        </a>
+    </div>
+
+    <div class="row g-4">
+        <!-- My Channels -->
+        <div class="col-lg-8">
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-broadcast-tower me-2"></i>My Channels
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if channels %}
+                    <div class="list-group list-group-flush" style="background: transparent;">
+                        {% for channel in channels %}
+                        <div class="list-group-item py-3 px-4 d-flex align-items-center"
+                           style="background: transparent; border-color: var(--border-color);">
+                            <a href="{{ url_for('view_channel', channel_id=channel['channel_id']) }}" 
+                               class="d-flex align-items-center flex-grow-1 text-decoration-none" style="color: var(--text-primary);">
+                                <div class="channel-icon me-3" style="width: 48px; height: 48px; background: var(--primary-gradient); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-{{ 'crown' if channel['created_by'] == session.user_id else 'users' }} fa-lg"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <h6 class="mb-1">{{ channel['name'] }}</h6>
+                                        <small class="text-secondary">{{ channel['created_at'][:10] }}</small>
+                                    </div>
+                                    <p class="text-secondary small mb-1">{{ channel['description'][:80] if channel['description'] else '' }}{{ '...' if channel['description'] and channel['description']|length > 80 else '' }}</p>
+                                    <div class="d-flex align-items-center gap-3">
+                                        {% if channel['created_by'] == session.user_id %}
+                                        <span class="badge badge-quantum badge-primary">Owner</span>
+                                        {% else %}
+                                        <span class="badge badge-quantum badge-secondary">Member</span>
+                                        {% endif %}
+                                        <small class="text-secondary">
+                                            <i class="fas fa-users me-1"></i>{{ channel['member_count'] or 1 }} members
+                                        </small>
+                                        <small class="text-secondary">
+                                            <i class="fas fa-comment me-1"></i>{{ channel['message_count'] or 0 }} messages
+                                        </small>
+                                    </div>
+                                </div>
+                            </a>
+                            <div class="flex-shrink-0 ms-3 d-flex align-items-center gap-2">
+                                {% if channel['created_by'] == session.user_id %}
+                                <button class="btn btn-sm btn-outline-danger delete-channel-btn" data-channel-id="{{ channel['channel_id'] }}" data-channel-name="{{ channel['name'] }}" title="Delete channel">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                {% endif %}
+                                <a href="{{ url_for('view_channel', channel_id=channel['channel_id']) }}" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-broadcast-tower fa-4x text-secondary mb-3"></i>
+                        <h5>No Channels Yet</h5>
+                        <p class="text-secondary">Create a channel or join an existing one</p>
+                        <a href="{{ url_for('create_channel') }}" class="btn btn-quantum">
+                            <i class="fas fa-plus me-2"></i>Create Channel
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Discover Channels -->
+            {% if discoverable_channels %}
+            <div class="card-quantum mt-4">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-compass me-2"></i>Discover Channels
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" style="background: transparent;">
+                        {% for channel in discoverable_channels %}
+                        <div class="list-group-item py-3 px-4 d-flex align-items-center"
+                           style="background: transparent; border-color: var(--border-color);">
+                            <div class="channel-icon me-3" style="width: 48px; height: 48px; background: linear-gradient(135deg, #6c757d, #495057); border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-lock fa-lg"></i>
+                            </div>
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-1">{{ channel['name'] }}</h6>
+                                    <small class="text-secondary">{{ channel['created_at'][:10] }}</small>
+                                </div>
+                                <p class="text-secondary small mb-1">{{ channel['description'][:80] if channel['description'] else 'No description' }}{{ '...' if channel['description'] and channel['description']|length > 80 else '' }}</p>
+                                <div class="d-flex align-items-center gap-3">
+                                    <small class="text-secondary">
+                                        <i class="fas fa-user me-1"></i>by {{ channel['creator_name'] }}
+                                    </small>
+                                    <small class="text-secondary">
+                                        <i class="fas fa-users me-1"></i>{{ channel['member_count'] or 1 }} members
+                                    </small>
+                                </div>
+                            </div>
+                            <div class="flex-shrink-0 ms-3">
+                                <a href="{{ url_for('join_channel', channel_id=channel['channel_id']) }}" class="btn btn-sm btn-outline-info">
+                                    <i class="fas fa-sign-in-alt me-1"></i>Join
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Join Channel -->
+            <div class="card-quantum mb-4">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-sign-in-alt me-2"></i>Join Channel
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <p class="text-secondary small mb-3">
+                        Enter a channel ID and quantum key to request access
+                    </p>
+                    <form id="joinChannelForm" method="post" onsubmit="return handleJoinChannel(event);">
+                        <div class="mb-3">
+                            <label class="form-label">Channel ID</label>
+                            <input type="text" id="joinChannelId" name="channel_id" class="form-control form-control-quantum" 
+                                   placeholder="Enter channel ID" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Quantum Key</label>
+                            <input type="password" name="quantum_key" class="form-control form-control-quantum" 
+                                   placeholder="Enter shared quantum key" required>
+                            <small class="text-secondary">Key must match channel's QKD key</small>
+                        </div>
+                        <button type="submit" class="btn btn-quantum w-100">
+                            <i class="fas fa-key me-2"></i>Verify & Request
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Pending Requests -->
+            {% if pending_requests %}
+            <div class="card-quantum mb-4">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-clock me-2"></i>Pending Requests
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush" style="background: transparent;">
+                        {% for request in pending_requests %}
+                        <div class="list-group-item py-3 px-4" style="background: transparent; border-color: var(--border-color);">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1" style="color: var(--text-primary);">{{ request['channel_name'] }}</h6>
+                                    <small class="text-secondary">Requested: {{ request['requested_at'][:10] }}</small>
+                                </div>
+                                <span class="badge badge-quantum badge-warning">Pending</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Channel Info -->
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>How It Works
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <h6><i class="fas fa-lock text-info me-2"></i>Publisher</h6>
+                        <p class="text-secondary small mb-0">
+                            Creates channel with QKD key. All messages encrypted with quantum-derived keys.
+                        </p>
+                    </div>
+                    <div class="mb-3">
+                        <h6><i class="fas fa-users text-info me-2"></i>Subscriber</h6>
+                        <p class="text-secondary small mb-0">
+                            Must provide matching quantum key to join. Key verification prevents unauthorized access.
+                        </p>
+                    </div>
+                    <div>
+                        <h6><i class="fas fa-sync-alt text-info me-2"></i>Key Refresh</h6>
+                        <p class="text-secondary small mb-0">
+                            Keys are automatically rotated to prevent replay attacks and maintain forward secrecy.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Private Chats Section -->
+    <div class="mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4>
+                <i class="fas fa-user-shield me-2"></i>Private Chats
+            </h4>
+            <a href="{{ url_for('private_chat_list') }}" class="btn btn-outline-info">
+                View All <i class="fas fa-arrow-right ms-2"></i>
+            </a>
+        </div>
+        
+        {% if private_chats %}
+        <div class="row g-3">
+            {% for chat in private_chats[:3] %}
+            <div class="col-md-4">
+                <a href="{{ url_for('view_private_chat', chat_id=chat['chat_id']) }}" class="text-decoration-none">
+                    <div class="card-quantum p-3 h-100">
+                        <div class="d-flex align-items-center mb-2">
+                            <div class="avatar-circle me-3" style="width: 40px; height: 40px; background: var(--primary-gradient); border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                {{ chat['other_user_name'][:1].upper() }}
+                            </div>
+                            <div>
+                                <h6 class="mb-0">{{ chat['other_user_name'] }}</h6>
+                                <small class="text-secondary">{{ chat['last_message_at'][:16] if chat['last_message_at'] else 'No messages yet' }}</small>
+                            </div>
+                        </div>
+                        {% if chat['unread_count'] %}
+                        <span class="badge badge-quantum badge-primary">{{ chat['unread_count'] }} new</span>
+                        {% endif %}
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="card-quantum p-4 text-center">
+            <p class="text-secondary mb-0">No private chats yet. Start a conversation from a user's profile.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function handleJoinChannel(event) {
+    event.preventDefault();
+    const channelId = document.getElementById('joinChannelId').value.trim();
+    if (!channelId) {
+        alert('Please enter a channel ID');
+        return false;
+    }
+    const form = document.getElementById('joinChannelForm');
+    form.action = `/channels/${channelId}/join`;
+    form.submit();
+    return false;
+}
+
+$(document).ready(function() {
+    $('.delete-channel-btn').click(function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const channelId = $(this).data('channel-id');
+        const channelName = $(this).data('channel-name');
+        const btn = $(this);
+        
+        if (confirm(`Delete channel "${channelName}"? This will permanently delete all messages and remove all members. This action cannot be undone.`)) {
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+            $.ajax({
+                url: `/api/channels/${channelId}`,
+                method: 'DELETE',
+                success: function(response) {
+                    if (response.success) {
+                        btn.closest('.list-group-item').fadeOut(300, function() { $(this).remove(); });
+                    } else {
+                        alert('Error: ' + (response.error || 'Failed to delete channel'));
+                        btn.prop('disabled', false).html('<i class="fas fa-trash"></i>');
+                    }
+                },
+                error: function() {
+                    alert('Failed to delete channel. Please try again.');
+                    btn.prop('disabled', false).html('<i class="fas fa-trash"></i>');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

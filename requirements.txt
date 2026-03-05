@@ -1,0 +1,30 @@
+# Flask and Web
+Flask==2.3.3
+Werkzeug==2.3.7
+
+# HTTPS (required for DeviceMotion sensors in Chrome on Android)
+pyopenssl>=25.0.0
+
+# Database
+# SQLite is built-in with Python
+
+# Cryptography
+cryptography==41.0.4
+pycryptodome==3.19.0
+
+# QR Code
+qrcode[pil]==7.4.2
+Pillow==10.0.1
+
+# Azure OpenAI
+openai==1.3.5
+
+# Email
+# smtplib is built-in with Python
+
+# Utilities
+numpy==2.0.0
+python-dotenv==1.0.0
+
+# For development
+flask-cors==4.0.0

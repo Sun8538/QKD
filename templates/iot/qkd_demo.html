@@ -1,0 +1,625 @@
+{% extends "base.html" %}
+{% block title %}QKD Demo — {{ device['device_name'] }}{% endblock %}
+
+{% block extra_css %}
+<style>
+/* ── Layout ─────────────────────────────────────────── */
+.demo-stage {
+    background: linear-gradient(135deg, #0a0a1a, #12122a);
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+.demo-stage::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 20% 50%, rgba(102,126,234,0.06) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 50%, rgba(0,255,136,0.04) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+/* ── Alice / Bob boxes ──────────────────────────────── */
+.party-box {
+    background: var(--card-bg);
+    border: 2px solid var(--border-color);
+    border-radius: 14px;
+    padding: 1.2rem;
+    text-align: center;
+    min-width: 130px;
+}
+.party-box.alice { border-color: #667eea; }
+.party-box.bob   { border-color: #00ff88; }
+.party-icon { font-size: 2.4rem; }
+.party-label { font-size: 0.85rem; font-weight: 700; margin-top: 0.3rem; }
+.party-sub   { font-size: 0.7rem; color: var(--text-secondary); }
+
+/* ── Quantum channel ────────────────────────────────── */
+.qchannel {
+    flex: 1;
+    position: relative;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.qchannel-line {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, #667eea, #764ba2, #00ff88);
+    border-radius: 2px;
+}
+.photon {
+    position: absolute;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #fff 0%, #667eea 60%, transparent 100%);
+    box-shadow: 0 0 12px #667eea, 0 0 24px rgba(102,126,234,0.4);
+    top: 50%; transform: translateY(-50%);
+    opacity: 0;
+    pointer-events: none;
+    left: 0;
+}
+@keyframes photonFly {
+    0%   { left: 0;   opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+}
+.qchannel-label {
+    position: absolute;
+    bottom: -18px;
+    font-size: 0.65rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+}
+
+/* ── Step cards ─────────────────────────────────────── */
+.step-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 1.2rem;
+    margin-bottom: 0.75rem;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: opacity 0.4s ease, transform 0.4s ease, border-color 0.3s;
+}
+.step-card.visible { opacity: 1; transform: translateY(0); }
+.step-card.active  { border-color: #667eea; }
+.step-card.done    { border-color: rgba(0,255,136,0.35); }
+
+.step-number {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: rgba(102,126,234,0.2);
+    border: 1px solid #667eea;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.75rem; font-weight: 700; color: #667eea;
+    margin-right: 0.6rem; flex-shrink: 0;
+}
+.step-number.done { background: rgba(0,255,136,0.2); border-color: #00ff88; color: #00ff88; }
+
+/* ── Bit/Basis rows ─────────────────────────────────── */
+.bit-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 0.6rem;
+}
+.bit-cell {
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 700;
+    border: 1px solid var(--border-color);
+    font-family: monospace;
+}
+.bit-cell.b0 { background: rgba(102,126,234,0.15); color: #667eea; }
+.bit-cell.b1 { background: rgba(118,75,162,0.2);   color: #b07fea; }
+.bit-cell.rec { background: rgba(0,180,216,0.15);  color: #00b4d8; }
+.bit-cell.dia { background: rgba(255,193,7,0.15);  color: #ffc107; }
+.bit-cell.match { background: rgba(0,255,136,0.2); color: #00ff88; border-color: #00ff88; }
+.bit-cell.mismatch { background: rgba(255,77,77,0.15); color: #ff4d4d; border-color: #ff4d4d; }
+.bit-cell.sifted { background: rgba(0,255,136,0.25); color: #00ff88; border-color: #00ff88; }
+.bit-cell.qubit { font-size: 1rem; }
+
+/* ── Key display ────────────────────────────────────── */
+.final-key-display {
+    background: linear-gradient(135deg, #0f0f23, #1a1a2e);
+    border: 1px solid #00ff88;
+    border-radius: 10px;
+    padding: 1rem;
+    font-family: monospace;
+    font-size: 0.85rem;
+    color: #00ff88;
+    word-break: break-all;
+    letter-spacing: 0.05em;
+    text-shadow: 0 0 8px rgba(0,255,136,0.5);
+}
+
+/* ── Encryption demo ─────────────────────────────────── */
+.enc-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.6rem;
+    font-family: monospace;
+    font-size: 0.8rem;
+}
+.enc-plain    { color: #00b4d8; }
+.enc-arrow    { color: var(--text-secondary); }
+.enc-cipher   { color: #f093fb; word-break: break-all; max-width: 260px; overflow: hidden;
+                text-overflow: ellipsis; white-space: nowrap; }
+.enc-decrypted { color: #00ff88; }
+
+/* ── Progress bar ────────────────────────────────────── */
+.qkd-progress {
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.08);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+.qkd-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #00ff88);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+}
+
+/* ── Buttons ─────────────────────────────────────────── */
+.btn-qkd-run {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    border: none; color: #fff;
+    border-radius: 50px; padding: 0.65rem 1.8rem;
+    font-weight: 600; cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.btn-qkd-run:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102,126,234,0.4);
+}
+.btn-qkd-run:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+/* ── Eve warning ─────────────────────────────────────── */
+.eve-warning {
+    background: rgba(255,77,77,0.1);
+    border: 1px solid rgba(255,77,77,0.4);
+    border-radius: 10px;
+    padding: 0.8rem 1rem;
+    color: #ff4d4d;
+    display: none;
+}
+
+/* ── Success banner ──────────────────────────────────── */
+.success-banner {
+    background: rgba(0,255,136,0.1);
+    border: 1px solid rgba(0,255,136,0.4);
+    border-radius: 10px;
+    padding: 1rem;
+    color: var(--accent-green);
+    display: none;
+    text-align: center;
+}
+
+/* ── Legend ──────────────────────────────────────────── */
+.legend-item { display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; }
+.legend-dot  { width: 10px; height: 10px; border-radius: 50%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Header -->
+    <div class="row mb-3 align-items-center">
+        <div class="col">
+            <a href="{{ url_for('iot_device_dashboard') }}" class="text-secondary small me-2">
+                <i class="fas fa-arrow-left"></i> IoT Devices
+            </a>
+            <h3 class="mt-2 mb-0">
+                <i class="fas fa-atom me-2 quantum-text"></i>
+                QKD in Action — <span style="color:#667eea;">{{ device['device_name'] }}</span>
+            </h3>
+            <p class="text-secondary small mt-1">
+                Watch a real BB84 Quantum Key Distribution protocol execute step by step
+            </p>
+        </div>
+        <div class="col-auto">
+            <button class="btn-qkd-run" id="runBtn" onclick="runHandshake()">
+                <i class="fas fa-play me-2"></i>Run Key Exchange
+            </button>
+        </div>
+    </div>
+
+    <!-- Alice ←→ Bob diagram -->
+    <div class="demo-stage mb-4">
+        <div class="d-flex align-items-center justify-content-between gap-3">
+            <!-- Alice (Phone) -->
+            <div class="party-box alice">
+                <div class="party-icon">📱</div>
+                <div class="party-label" style="color:#667eea;">Alice</div>
+                <div class="party-sub">Your Phone</div>
+                <div class="party-sub mt-1" id="aliceStatus">Idle</div>
+            </div>
+
+            <!-- Quantum Channel -->
+            <div class="qchannel" id="qchannel">
+                <div class="qchannel-line"></div>
+                <div class="photon" id="photon"></div>
+                <div class="qchannel-label" id="channelLabel">Quantum Channel (Photon Stream)</div>
+            </div>
+
+            <!-- Bob (Server) -->
+            <div class="party-box bob">
+                <div class="party-icon">🖥️</div>
+                <div class="party-label" style="color:#00ff88;">Bob</div>
+                <div class="party-sub">This Server</div>
+                <div class="party-sub mt-1" id="bobStatus">Idle</div>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="d-flex flex-wrap gap-3 mt-3 pt-2 border-top" style="border-color:var(--border-color)!important;">
+            <div class="legend-item"><div class="legend-dot" style="background:#667eea;"></div> Rectilinear basis (+)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ffc107;"></div> Diagonal basis (×)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#00ff88;"></div> Matching (kept)</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#ff4d4d;"></div> Mismatch (discarded)</div>
+        </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="qkd-progress"><div class="qkd-progress-fill" id="progressBar"></div></div>
+
+    <!-- Eve warning -->
+    <div class="eve-warning mb-3" id="eveWarning">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Eavesdropper Detected!</strong> Error rate exceeded 11% threshold — protocol aborted. In real QKD this prevents key use when Eve intercepts.
+    </div>
+
+    <!-- Success banner -->
+    <div class="success-banner mb-3" id="successBanner">
+        <i class="fas fa-lock me-2"></i>
+        <strong>Quantum Key Exchange Successful!</strong><br>
+        <small>This device's telemetry will now be encrypted with the QKD-derived key before storage.</small>
+    </div>
+
+    <div class="row g-4">
+        <!-- Steps column -->
+        <div class="col-lg-7" id="stepsColumn"></div>
+
+        <!-- Info panel -->
+        <div class="col-lg-5">
+
+            <!-- Key status -->
+            <div class="card-quantum mb-3">
+                <div class="card-header-quantum">
+                    <h6 class="mb-0"><i class="fas fa-key me-2"></i>Quantum Key Status</h6>
+                </div>
+                <div class="card-body p-3">
+                    {% if device['quantum_key'] %}
+                    <div class="mb-2">
+                        <span class="badge badge-quantum badge-success">
+                            <i class="fas fa-check me-1"></i>Key Active
+                        </span>
+                    </div>
+                    <div class="final-key-display">{{ device['quantum_key'] }}</div>
+                    <div class="text-secondary small mt-2">
+                        Run a new exchange to rotate this key.
+                    </div>
+                    {% else %}
+                    <span class="badge badge-quantum badge-warning">
+                        <i class="fas fa-clock me-1"></i>No Key Yet
+                    </span>
+                    <p class="text-secondary small mt-2 mb-0">
+                        Click "Run Key Exchange" to generate the first quantum key.
+                    </p>
+                    {% endif %}
+                    <div id="newKeyBox" class="mt-3" style="display:none;">
+                        <div class="small text-secondary mb-1">New key generated:</div>
+                        <div class="final-key-display" id="newKeyDisplay"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- What is BB84? -->
+            <div class="card-quantum mb-3">
+                <div class="card-header-quantum">
+                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>How BB84 Works</h6>
+                </div>
+                <div class="card-body p-3">
+                    <div class="small" style="line-height: 1.7;">
+                        <p class="mb-2">
+                            <strong class="text-info">1. Alice (Phone)</strong> sends random bits encoded
+                            as photon polarizations over a quantum channel.
+                        </p>
+                        <p class="mb-2">
+                            <strong class="text-success">2. Bob (Server)</strong> measures each photon
+                            using a randomly chosen basis.
+                        </p>
+                        <p class="mb-2">
+                            <strong style="color:#ffc107;">3. Sifting</strong> — only measurements
+                            where both chose the <em>same basis</em> are kept.
+                        </p>
+                        <p class="mb-2">
+                            <strong style="color:#f093fb;">4. Privacy Amplification</strong> hashes the
+                            sifted key to eliminate any info an eavesdropper could have.
+                        </p>
+                        <p class="mb-0">
+                            <strong style="color:#00ff88;">5. Result</strong> — both sides share an
+                            identical secret key that was <em>never transmitted classically</em>.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Encryption demo -->
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h6 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Telemetry Encryption Demo</h6>
+                </div>
+                <div class="card-body p-3">
+                    <div class="small text-secondary mb-2">
+                        After key exchange, each sensor packet is encrypted before storage:
+                    </div>
+                    <div id="encDemo">
+                        <div class="text-secondary small">Run the key exchange to see encryption demo.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const DEVICE_DB_ID = {{ device['id'] }};
+let running = false;
+
+// ── Photon animation ───────────────────────────────────────────────────────
+function shootPhoton() {
+    const p = document.getElementById('photon');
+    p.style.animation = 'none';
+    // Force reflow
+    void p.offsetWidth;
+    p.style.animation = 'photonFly 0.6s linear forwards';
+}
+
+function startPhotonStream() {
+    let count = 0;
+    const interval = setInterval(() => {
+        shootPhoton();
+        count++;
+        if (count >= 12) clearInterval(interval);
+    }, 200);
+}
+
+// ── Step rendering ─────────────────────────────────────────────────────────
+function renderSteps(steps) {
+    const col = document.getElementById('stepsColumn');
+    col.innerHTML = '';
+
+    steps.forEach((step, idx) => {
+        const card = document.createElement('div');
+        card.className = 'step-card';
+        card.id = 'step-' + step.step;
+
+        let inner = `
+            <div class="d-flex align-items-start">
+                <span class="step-number" id="snum-${step.step}">${step.step}</span>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold small">${step.name}</div>
+                    <div class="text-secondary" style="font-size:0.75rem;">${step.description}</div>
+                    ${renderStepData(step)}
+                </div>
+            </div>`;
+
+        card.innerHTML = inner;
+        col.appendChild(card);
+
+        // Staggered appearance
+        setTimeout(() => {
+            card.classList.add('visible');
+            // Briefly highlight as active, then done
+            setTimeout(() => card.classList.add('active'), 50);
+            setTimeout(() => {
+                card.classList.remove('active');
+                card.classList.add('done');
+                document.getElementById('snum-' + step.step).classList.add('done');
+            }, 800);
+        }, idx * 300);
+    });
+}
+
+function renderStepData(step) {
+    const d = step.data || {};
+    let html = '';
+
+    switch (step.step) {
+        case 1: // Alice bits
+            html = bitRow(d.bits, 'b', 'Alice bits');
+            html += `<div class="text-secondary" style="font-size:0.7rem;margin-top:4px;">Total: ${d.total} bits generated</div>`;
+            break;
+        case 2: // Alice bases
+            html = basisRow(d.bases, 'Alice bases');
+            break;
+        case 3: // Qubits
+            html = qubitRow(d.qubits);
+            break;
+        case 4: // Bob bases
+            html = basisRow(d.bases, 'Bob bases');
+            break;
+        case 5: // Measurements
+            html = measureRow(d.measurements);
+            break;
+        case 6: // Reconciliation
+            html = `<div class="mt-2 small">
+                <span class="badge badge-quantum badge-success me-2">${d.matching_count} matching</span>
+                <span class="badge badge-quantum badge-danger me-2">${d.total - d.matching_count} discarded</span>
+                <span class="badge badge-quantum badge-primary">Match rate: ${d.match_rate}</span>
+            </div>`;
+            break;
+        case 7: // Sifting
+            html = `<div class="mt-2">`;
+            html += `<div class="small text-secondary mb-1">Alice sifted:</div>` + bitRowColored(d.alice_sifted);
+            html += `<div class="small text-secondary mb-1 mt-2">Bob sifted:</div>` + bitRowColored(d.bob_sifted);
+            html += `<div class="text-secondary small mt-1">Sifted key length: ${d.sifted_length} bits</div>`;
+            html += `</div>`;
+            break;
+        case 8: // Error rate
+            const safe = d.secure;
+            html = `<div class="mt-2 small">
+                <span class="badge badge-quantum ${safe ? 'badge-success' : 'badge-danger'} me-2">
+                    QBER: ${d.error_rate}
+                </span>
+                <span class="badge badge-quantum badge-info">Threshold: ${d.threshold}</span>
+                <span class="ms-2 ${safe ? 'text-success' : 'text-danger'}">
+                    ${safe ? '✓ Channel Secure' : '⚠ Possible Eavesdropper'}
+                </span>
+            </div>`;
+            break;
+        case 9: // Privacy amplification or abort
+            if (d.status === 'ABORT') {
+                html = `<div class="mt-2 text-danger small"><i class="fas fa-ban me-1"></i>${d.reason}</div>`;
+            } else {
+                html = `<div class="mt-2 small">
+                    <span class="badge badge-quantum badge-success me-2">Input: ${d.input_length} bits</span>
+                    <span class="badge badge-quantum badge-primary">Output: ${d.output_length} bits</span>
+                </div>`;
+            }
+            break;
+        case 10: // Final key
+            html = `<div class="final-key-display mt-2" style="font-size:0.78rem;">${d.key || ''}</div>
+                    <div class="text-secondary small mt-1">Key hash (fingerprint): ${d.hash || ''}</div>`;
+            break;
+    }
+    return html ? `<div class="step-data">${html}</div>` : '';
+}
+
+function bitRow(bits, type, label) {
+    if (!bits || !bits.length) return '';
+    return `<div class="bit-row mt-1">${bits.slice(0,20).map(b =>
+        `<div class="bit-cell b${b}">${b}</div>`).join('')}
+        ${bits.length > 20 ? `<div class="bit-cell" style="background:none;border:none;color:var(--text-secondary)">+${bits.length-20}</div>` : ''}
+    </div>`;
+}
+
+function bitRowColored(bits) {
+    if (!bits || !bits.length) return '';
+    return `<div class="bit-row">${bits.slice(0,20).map(b =>
+        `<div class="bit-cell sifted">${b}</div>`).join('')}</div>`;
+}
+
+function basisRow(bases, label) {
+    if (!bases || !bases.length) return '';
+    return `<div class="bit-row mt-1">${bases.slice(0,20).map(b =>
+        `<div class="bit-cell ${b === '+' ? 'rec' : 'dia'}">${b}</div>`).join('')}</div>`;
+}
+
+function qubitRow(qubits) {
+    if (!qubits || !qubits.length) return '';
+    return `<div class="bit-row mt-1">${qubits.slice(0,10).map(q =>
+        `<div class="bit-cell qubit ${q.basis === '+' ? 'rec' : 'dia'}" title="${q.state} (${q.basis})">${q.polarization}</div>`
+    ).join('')}</div>`;
+}
+
+function measureRow(meas) {
+    if (!meas || !meas.length) return '';
+    return `<div class="bit-row mt-1">${meas.slice(0,10).map(m =>
+        `<div class="bit-cell ${m.basis_match ? 'match' : 'mismatch'}" title="${m.basis_match ? 'Match ✓' : 'Mismatch ✗'}">${m.measured_bit}</div>`
+    ).join('')}</div>`;
+}
+
+// ── Encryption demo ────────────────────────────────────────────────────────
+function showEncDemo(finalKey) {
+    if (!finalKey) return;
+    const sample_plain = '{"accel_x": 3.42, "accel_y": -1.07, "battery": 0.87}';
+    // Show simulated encryption (actual encryption happens server-side)
+    const cipher_preview = btoa(sample_plain).slice(0, 32) + '...';
+    document.getElementById('encDemo').innerHTML = `
+        <div class="enc-row">
+            <span class="enc-plain" title="Raw sensor data">RAW</span>
+            <span class="enc-arrow">→ 🔐 QKD key →</span>
+            <span class="enc-cipher" title="Encrypted with quantum key">${cipher_preview}</span>
+        </div>
+        <div class="enc-row mt-1">
+            <span class="enc-cipher" style="max-width:200px;">${cipher_preview}</span>
+            <span class="enc-arrow">→ 🔓 decrypt →</span>
+            <span class="enc-decrypted">accel_x: 3.42 ✓</span>
+        </div>
+        <div class="text-secondary small mt-2">
+            <i class="fas fa-info-circle me-1"></i>
+            Every telemetry packet from your phone is now stored encrypted.
+            Dashboard decrypts it on the fly for display.
+        </div>`;
+}
+
+// ── Main handshake runner ──────────────────────────────────────────────────
+async function runHandshake() {
+    if (running) return;
+    running = true;
+
+    const btn = document.getElementById('runBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Exchanging Keys…';
+
+    document.getElementById('eveWarning').style.display = 'none';
+    document.getElementById('successBanner').style.display = 'none';
+    document.getElementById('stepsColumn').innerHTML =
+        '<div class="text-secondary text-center py-4"><i class="fas fa-spinner fa-spin fa-2x"></i><br><small class="mt-2 d-block">Running BB84 protocol…</small></div>';
+    document.getElementById('progressBar').style.width = '10%';
+
+    // Status updates
+    document.getElementById('aliceStatus').textContent = 'Generating bits…';
+    document.getElementById('bobStatus').textContent = 'Listening…';
+    document.getElementById('channelLabel').textContent = '↔ Transmitting photons…';
+
+    // Fire photon animation
+    startPhotonStream();
+
+    try {
+        const resp = await fetch('/api/iot/qkd-handshake/' + DEVICE_DB_ID, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json',
+                      'X-CSRFToken': ''}
+        });
+        const result = await resp.json();
+
+        document.getElementById('progressBar').style.width = '70%';
+
+        if (!result.success && result.error === 'Eavesdropping detected') {
+            document.getElementById('eveWarning').style.display = 'block';
+            document.getElementById('aliceStatus').textContent = 'ABORTED';
+            document.getElementById('bobStatus').textContent = 'ABORTED';
+        } else {
+            document.getElementById('successBanner').style.display = 'block';
+            document.getElementById('aliceStatus').textContent = '✓ Key ready';
+            document.getElementById('bobStatus').textContent = '✓ Key ready';
+            document.getElementById('channelLabel').textContent = '✓ Quantum channel secured';
+
+            if (result.final_key) {
+                document.getElementById('newKeyBox').style.display = 'block';
+                document.getElementById('newKeyDisplay').textContent = result.final_key;
+                showEncDemo(result.final_key);
+            }
+        }
+
+        document.getElementById('progressBar').style.width = '100%';
+        renderSteps(result.visualization || []);
+
+    } catch (e) {
+        document.getElementById('stepsColumn').innerHTML =
+            '<div class="text-danger small p-3"><i class="fas fa-exclamation-circle me-1"></i>Network error. Make sure the server is running.</div>';
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fas fa-redo me-2"></i>Run Again';
+    running = false;
+}
+</script>
+{% endblock %}

@@ -1,0 +1,331 @@
+{% extends "base.html" %}
+{% block title %}Create Channel - Quantum IoT Security{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb" style="background: transparent;">
+            <li class="breadcrumb-item"><a href="{{ url_for('channels_list') }}" class="text-info">Channels</a></li>
+            <li class="breadcrumb-item active">Create Channel</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h4 class="mb-0">
+                        <i class="fas fa-broadcast-tower me-2"></i>Create Quantum Channel
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form action="{{ url_for('create_channel') }}" method="post" id="createChannelForm">
+                        <!-- Channel Name -->
+                        <div class="mb-4">
+                            <label class="form-label">Channel Name</label>
+                            <input type="text" name="name" class="form-control form-control-quantum" 
+                                   placeholder="Enter a unique channel name" required maxlength="100">
+                            <small class="text-secondary">This will be visible to all members</small>
+                        </div>
+
+                        <!-- Description -->
+                        <div class="mb-4">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control form-control-quantum" rows="3" 
+                                      placeholder="Describe the purpose of this channel" maxlength="500"></textarea>
+                        </div>
+
+                        <!-- QKD Key Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">Quantum Key</label>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <select name="key_id" id="keySelect" class="form-control form-control-quantum">
+                                        <option value="">-- Generate New Key --</option>
+                                        {% for key in available_keys %}
+                                        <option value="{{ key['key_id'] }}" 
+                                                data-hash="{{ key['key_hash'] }}"
+                                                data-error-rate="{{ key['error_rate'] }}">
+                                            {{ key['key_hash'] }} ({{ "%.2f"|format(key['error_rate'] * 100) }}% error)
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                    <small class="text-secondary">
+                                        Select an existing key or generate a new one for this channel
+                                    </small>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="button" class="btn btn-outline-info w-100" id="generateKeyBtn">
+                                        <i class="fas fa-atom me-2"></i>Generate New
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Key Preview -->
+                        <div id="keyPreview" class="mb-4" style="display: none;">
+                            <label class="form-label">Selected Key</label>
+                            <div class="p-3" style="background: rgba(0, 0, 0, 0.3); border-radius: 12px;">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="text-secondary">Key Hash:</span>
+                                    <code id="previewHash" class="text-info"></code>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <span class="text-secondary">Error Rate:</span>
+                                    <span id="previewErrorRate"></span>
+                                </div>
+                            </div>
+                            <div class="alert alert-info mt-2 py-2 px-3 mb-0" style="background: rgba(0, 212, 255, 0.1); border-color: rgba(0, 212, 255, 0.3);">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <small>Share this key hash with users who should join this channel</small>
+                            </div>
+                        </div>
+
+                        <!-- Channel Settings -->
+                        <div class="mb-4">
+                            <label class="form-label">Channel Settings</label>
+                            <div class="p-3" style="background: rgba(0, 0, 0, 0.3); border-radius: 12px;">
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="requireApproval" 
+                                           name="require_approval" checked>
+                                    <label class="form-check-label" for="requireApproval">
+                                        Require approval for new members
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="enableKeyRefresh" 
+                                           name="enable_key_refresh" checked>
+                                    <label class="form-check-label" for="enableKeyRefresh">
+                                        Enable automatic key refresh
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="encryptMessages" 
+                                           name="encrypt_messages" checked>
+                                    <label class="form-check-label" for="encryptMessages">
+                                        Encrypt all messages
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Key Refresh Interval -->
+                        <div class="mb-4" id="refreshIntervalSection">
+                            <label class="form-label">Key Refresh Interval</label>
+                            <select name="refresh_interval" class="form-control form-control-quantum">
+                                <option value="60">Every 1 minute (Testing)</option>
+                                <option value="300" selected>Every 5 minutes (Recommended)</option>
+                                <option value="900">Every 15 minutes</option>
+                                <option value="1800">Every 30 minutes</option>
+                                <option value="3600">Every 1 hour</option>
+                            </select>
+                            <small class="text-secondary">
+                                More frequent refreshes provide better security against replay attacks
+                            </small>
+                        </div>
+
+                        <hr style="border-color: var(--border-color);">
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('channels_list') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-quantum" id="createBtn">
+                                <i class="fas fa-plus me-2"></i>Create Channel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Security Info -->
+            <div class="card-quantum mt-4">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Security Features
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-key text-info me-3 mt-1"></i>
+                                <div>
+                                    <h6>QKD Key Verification</h6>
+                                    <p class="text-secondary small mb-0">
+                                        New members must provide the matching quantum key to join, 
+                                        preventing unauthorized access.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-sync-alt text-info me-3 mt-1"></i>
+                                <div>
+                                    <h6>Automatic Key Rotation</h6>
+                                    <p class="text-secondary small mb-0">
+                                        Keys are refreshed periodically to maintain forward secrecy 
+                                        and prevent replay attacks.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-lock text-info me-3 mt-1"></i>
+                                <div>
+                                    <h6>End-to-End Encryption</h6>
+                                    <p class="text-secondary small mb-0">
+                                        All messages are encrypted using keys derived from the 
+                                        quantum key distribution process.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-user-check text-info me-3 mt-1"></i>
+                                <div>
+                                    <h6>Member Approval</h6>
+                                    <p class="text-secondary small mb-0">
+                                        Channel owners can review and approve join requests 
+                                        for additional security.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Generate Key Modal -->
+<div class="modal fade" id="generateKeyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: var(--card-bg); border-color: var(--border-color);">
+            <div class="modal-header border-0">
+                <h5 class="modal-title">
+                    <i class="fas fa-atom me-2"></i>Generate Quantum Key
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Key Length</label>
+                    <select id="modalKeyLength" class="form-control form-control-quantum">
+                        <option value="128">128 bits</option>
+                        <option value="256" selected>256 bits (Recommended)</option>
+                        <option value="512">512 bits</option>
+                    </select>
+                </div>
+                <div id="generatingStatus" style="display: none;">
+                    <div class="text-center py-3">
+                        <div class="spinner-border text-info mb-3"></div>
+                        <p class="text-secondary mb-0">Generating quantum key using BB84 protocol...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0" id="modalFooter">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-quantum" id="confirmGenerateKey">
+                    <i class="fas fa-atom me-2"></i>Generate
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Key selection preview
+    $('#keySelect').change(function() {
+        const selected = $(this).find(':selected');
+        if (selected.val()) {
+            $('#previewHash').text(selected.data('hash'));
+            const errorRate = selected.data('error-rate') * 100;
+            let errorClass = 'text-success';
+            if (errorRate >= 5) errorClass = 'text-warning';
+            if (errorRate >= 11) errorClass = 'text-danger';
+            $('#previewErrorRate').html(`<span class="${errorClass}">${errorRate.toFixed(2)}%</span>`);
+            $('#keyPreview').show();
+        } else {
+            $('#keyPreview').hide();
+        }
+    });
+    
+    // Toggle refresh interval visibility
+    $('#enableKeyRefresh').change(function() {
+        if ($(this).is(':checked')) {
+            $('#refreshIntervalSection').show();
+        } else {
+            $('#refreshIntervalSection').hide();
+        }
+    });
+    
+    // Generate key modal
+    $('#generateKeyBtn').click(function() {
+        new bootstrap.Modal('#generateKeyModal').show();
+    });
+    
+    // Confirm generate key
+    $('#confirmGenerateKey').click(function() {
+        const keyLength = $('#modalKeyLength').val();
+        
+        $(this).prop('disabled', true);
+        $('#generatingStatus').show();
+        $('#modalFooter').hide();
+        
+        $.ajax({
+            url: '{{ url_for("api_qkd_generate") }}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                key_length: parseInt(keyLength),
+                key_type: 'channel'
+            }),
+            success: function(response) {
+                if (response.success) {
+                    // Add new key to select
+                    const newOption = $('<option>')
+                        .val(response.key_id)
+                        .text(`${response.key_hash} (${(response.error_rate * 100).toFixed(2)}% error)`)
+                        .data('hash', response.key_hash)
+                        .data('error-rate', response.error_rate);
+                    
+                    $('#keySelect').append(newOption).val(response.key_id).trigger('change');
+                    bootstrap.Modal.getInstance('#generateKeyModal').hide();
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function() {
+                alert('Failed to generate key');
+            },
+            complete: function() {
+                $('#confirmGenerateKey').prop('disabled', false);
+                $('#generatingStatus').hide();
+                $('#modalFooter').show();
+            }
+        });
+    });
+    
+    // Form submission
+    $('#createChannelForm').submit(function(e) {
+        if (!$('#keySelect').val()) {
+            e.preventDefault();
+            alert('Please select or generate a quantum key for this channel');
+            return false;
+        }
+        
+        $('#createBtn').prop('disabled', true).html(
+            '<span class="spinner-border spinner-border-sm me-2"></span>Creating...'
+        );
+    });
+});
+</script>
+{% endblock %}

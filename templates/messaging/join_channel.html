@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+
+{% block title %}Join Channel - {{ channel['name'] }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <!-- Channel Info Card -->
+            <div class="card-quantum mb-4">
+                <div class="card-header-quantum">
+                    <h4 class="mb-0">
+                        <i class="fas fa-users me-2"></i>
+                        {{ channel['name'] }}
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <p class="text-secondary mb-2">
+                            <i class="fas fa-info-circle me-2"></i>
+                            {{ channel['description'] or 'No description provided' }}
+                        </p>
+                    </div>
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 rounded" style="background: rgba(102, 126, 234, 0.1); border: 1px solid var(--border-color);">
+                                <small class="text-secondary d-block mb-1">Created By</small>
+                                <strong>{{ channel['creator_name'] }}</strong>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 rounded" style="background: rgba(102, 126, 234, 0.1); border: 1px solid var(--border-color);">
+                                <small class="text-secondary d-block mb-1">Members</small>
+                                <strong>{{ channel['member_count'] }} members</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Join Request Form -->
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-key me-2"></i>
+                        Enter Quantum Key
+                    </h5>
+                    <p class="text-secondary mb-0 mt-2 small">
+                        You need the quantum encryption key to request access to this channel
+                    </p>
+                </div>
+                <div class="card-body p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <form method="POST" action="{{ url_for('join_channel', channel_id=channel['channel_id']) }}">
+                        <div class="mb-4">
+                            <label for="quantum_key" class="form-label">
+                                <i class="fas fa-shield-alt me-2"></i>
+                                Quantum Key
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="background: rgba(102, 126, 234, 0.1); border-color: var(--border-color); color: var(--text-secondary);">
+                                    <i class="fas fa-fingerprint"></i>
+                                </span>
+                                <input type="password" 
+                                       class="form-control form-control-quantum" 
+                                       id="quantum_key" 
+                                       name="quantum_key" 
+                                       required 
+                                       placeholder="Enter the quantum encryption key"
+                                       style="font-family: 'JetBrains Mono', monospace;">
+                                <button class="btn btn-outline-secondary" type="button" id="toggleKey" 
+                                        style="background: rgba(102, 126, 234, 0.1); border-color: var(--border-color); color: var(--text-secondary);">
+                                    <i class="fas fa-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                            <small class="text-secondary mt-2 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Ask the channel admin for the quantum key
+                            </small>
+                        </div>
+
+                        <div class="alert alert-info" style="background: rgba(0, 180, 216, 0.1); border-color: rgba(0, 180, 216, 0.3); color: var(--text-primary);">
+                            <i class="fas fa-shield-alt me-2"></i>
+                            <strong>Quantum Security:</strong> This channel uses BB84 protocol for quantum key distribution. Your request will be encrypted using quantum-resistant algorithms.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-quantum">
+                                <i class="fas fa-paper-plane me-2"></i>
+                                Send Join Request
+                            </button>
+                            <a href="{{ url_for('channels_list') }}" class="btn btn-outline-quantum">
+                                <i class="fas fa-arrow-left me-2"></i>
+                                Back to Channels
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Security Features -->
+            <div class="text-center mt-4">
+                <div class="d-flex justify-content-center gap-4 flex-wrap">
+                    <div class="text-secondary small">
+                        <i class="fas fa-lock me-2" style="color: #00ff88;"></i>
+                        End-to-End Encrypted
+                    </div>
+                    <div class="text-secondary small">
+                        <i class="fas fa-network-wired me-2" style="color: #00b4d8;"></i>
+                        BB84 Protocol
+                    </div>
+                    <div class="text-secondary small">
+                        <i class="fas fa-shield-alt me-2" style="color: #764ba2;"></i>
+                        Quantum Secure
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle password visibility
+document.getElementById('toggleKey').addEventListener('click', function() {
+    const keyInput = document.getElementById('quantum_key');
+    const icon = document.getElementById('toggleIcon');
+    
+    if (keyInput.type === 'password') {
+        keyInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        keyInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+});
+</script>
+{% endblock %}

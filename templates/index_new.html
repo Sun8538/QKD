@@ -1,0 +1,334 @@
+{% extends "base.html" %}
+{% block title %}Quantum Cryptography for IoT Networks{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero-section {
+        min-height: calc(100vh - 80px);
+        display: flex;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .hero-content {
+        position: relative;
+        z-index: 2;
+    }
+    
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 700;
+        line-height: 1.2;
+        margin-bottom: 1.5rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.25rem;
+        color: var(--text-secondary);
+        margin-bottom: 2rem;
+        max-width: 600px;
+    }
+    
+    .feature-card {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 20px;
+        padding: 2rem;
+        height: 100%;
+        transition: all 0.3s ease;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-10px);
+        border-color: #667eea;
+        box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+    }
+    
+    .feature-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.75rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .feature-icon.qkd { background: linear-gradient(135deg, #667eea, #764ba2); }
+    .feature-icon.messaging { background: linear-gradient(135deg, #00b4d8, #0077b6); }
+    .feature-icon.files { background: linear-gradient(135deg, #00ff88, #00cc6a); }
+    .feature-icon.ai { background: linear-gradient(135deg, #f093fb, #f5576c); }
+    
+    .quantum-orbit {
+        position: absolute;
+        right: -100px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 500px;
+        height: 500px;
+        opacity: 0.3;
+    }
+    
+    .orbit-ring {
+        position: absolute;
+        border: 2px solid #667eea;
+        border-radius: 50%;
+        animation: rotate 20s linear infinite;
+    }
+    
+    .orbit-ring:nth-child(1) { width: 100%; height: 100%; }
+    .orbit-ring:nth-child(2) { width: 80%; height: 80%; top: 10%; left: 10%; animation-duration: 15s; }
+    .orbit-ring:nth-child(3) { width: 60%; height: 60%; top: 20%; left: 20%; animation-duration: 10s; }
+    
+    .orbit-dot {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: var(--accent-green);
+        border-radius: 50%;
+        box-shadow: 0 0 20px var(--accent-green);
+    }
+    
+    @keyframes rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .stats-section {
+        background: var(--card-bg);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-top: 3rem;
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
+    .stat-label {
+        color: var(--text-secondary);
+        font-size: 0.9rem;
+        margin-top: 0.5rem;
+    }
+    
+    .cta-section {
+        background: var(--primary-gradient);
+        border-radius: 20px;
+        padding: 3rem;
+        text-align: center;
+        margin-top: 4rem;
+    }
+    
+    @media (max-width: 992px) {
+        .hero-title {
+            font-size: 2.5rem;
+        }
+        
+        .quantum-orbit {
+            display: none;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="row align-items-center">
+            <div class="col-lg-7 hero-content">
+                <h1 class="hero-title animate__animated animate__fadeInUp">
+                    <span class="quantum-text">Quantum Secured</span><br>&nbsp;&nbsp;&nbsp;
+                    IoT Communication
+                </h1>
+                <p class="hero-subtitle animate__animated animate__fadeInUp animate__delay-1s">
+                    Harness the power of Quantum Key Distribution (BB84 Protocol) 
+                    to protect your IoT network communications with unbreakable encryption.
+                </p>
+                <div class="d-flex gap-3 animate__animated animate__fadeInUp animate__delay-2s">
+                    <a href="{{ url_for('register') }}" class="btn btn-quantum btn-lg">
+                        <i class="fas fa-rocket me-2"></i> Get Started
+                    </a>
+                    <a href="{{ url_for('login') }}" class="btn btn-outline-quantum btn-lg">
+                        <i class="fas fa-sign-in-alt me-2"></i> Login
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-5 d-none d-lg-block">
+                <div class="quantum-orbit">
+                    <div class="orbit-ring">
+                        <div class="orbit-dot" style="top: 0; left: 50%;"></div>
+                    </div>
+                    <div class="orbit-ring">
+                        <div class="orbit-dot" style="top: 50%; right: 0;"></div>
+                    </div>
+                    <div class="orbit-ring">
+                        <div class="orbit-dot" style="bottom: 0; left: 50%;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="py-5">
+        <div class="text-center mb-5">
+            <h2 class="h1 mb-3">Key Features</h2>
+            <p class="text-secondary">Advanced quantum cryptography features for secure IoT communications</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon qkd">
+                        <i class="fas fa-key"></i>
+                    </div>
+                    <h4>QKD Generation</h4>
+                    <p class="text-secondary mb-0">
+                        Generate quantum-secure keys using BB84 protocol with real-time visualization 
+                        of the key exchange process.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon messaging">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h4>Secure Messaging</h4>
+                    <p class="text-secondary mb-0">
+                        Pub/Sub messaging with quantum key verification. Third-party approval 
+                        required for channel access.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon files">
+                        <i class="fas fa-file-shield"></i>
+                    </div>
+                    <h4>File Encryption</h4>
+                    <p class="text-secondary mb-0">
+                        Encrypt files with QKD keys, generate QR codes for access, 
+                        and share keys securely via email.
+                    </p>
+                </div>
+            </div>
+            
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon ai">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h4>AI Assistant</h4>
+                    <p class="text-secondary mb-0">
+                        Azure OpenAI-powered key management for optimal rotation schedules 
+                        and security recommendations.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="row">
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-number">256-bit</div>
+                    <div class="stat-label">Key Length</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-number">BB84</div>
+                    <div class="stat-label">QKD Protocol</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-number">5 min</div>
+                    <div class="stat-label">Auto Key Refresh</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-item">
+                    <div class="stat-number">100%</div>
+                    <div class="stat-label">Quantum Secure</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="py-5">
+        <div class="text-center mb-5">
+            <h2 class="h1 mb-3">How QKD Works</h2>
+            <p class="text-secondary">The BB84 protocol ensures unbreakable key exchange</p>
+        </div>
+        
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card-quantum p-4 text-center h-100">
+                    <div class="rounded-circle bg-primary bg-gradient d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 60px; height: 60px;">
+                        <span class="text-white fs-4 fw-bold">1</span>
+                    </div>
+                    <h5>Quantum State Preparation</h5>
+                    <p class="text-secondary mb-0">
+                        Alice encodes random bits into quantum states using randomly chosen bases.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-quantum p-4 text-center h-100">
+                    <div class="rounded-circle bg-primary bg-gradient d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 60px; height: 60px;">
+                        <span class="text-white fs-4 fw-bold">2</span>
+                    </div>
+                    <h5>Measurement & Sifting</h5>
+                    <p class="text-secondary mb-0">
+                        Bob measures with random bases. They compare bases publicly and keep matching bits.
+                    </p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-quantum p-4 text-center h-100">
+                    <div class="rounded-circle bg-primary bg-gradient d-inline-flex align-items-center justify-content-center mb-3" 
+                         style="width: 60px; height: 60px;">
+                        <span class="text-white fs-4 fw-bold">3</span>
+                    </div>
+                    <h5>Privacy Amplification</h5>
+                    <p class="text-secondary mb-0">
+                        Final secure key is produced by hashing, eliminating any leaked information.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+        <h2 class="text-white mb-3">Ready to Secure Your IoT Network?</h2>
+        <p class="text-white-50 mb-4">
+            Start using quantum-secure communications today.
+        </p>
+        <a href="{{ url_for('register') }}" class="btn btn-light btn-lg">
+            <i class="fas fa-shield-alt me-2"></i> Create Free Account
+        </a>
+    </section>
+</div>
+{% endblock %}

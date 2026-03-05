@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+{% block title %}Upload File - Quantum IoT Security{% endblock %}
+
+{% block extra_css %}
+<style>
+    .upload-zone {
+        border: 2px dashed var(--border-color);
+        border-radius: 16px;
+        padding: 3rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    .upload-zone:hover, .upload-zone.dragover {
+        border-color: var(--accent-blue);
+        background: rgba(102, 126, 234, 0.1);
+    }
+    .upload-zone.dragover {
+        transform: scale(1.02);
+    }
+    .upload-preview {
+        max-width: 200px;
+        max-height: 200px;
+        margin: 1rem auto;
+        border-radius: 8px;
+        display: none;
+    }
+    .encryption-progress {
+        display: none;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    .step-item {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .step-circle {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--card-bg);
+        border: 2px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        transition: all 0.3s ease;
+    }
+    .step-item.active .step-circle {
+        background: var(--primary-gradient);
+        border-color: transparent;
+    }
+    .step-item.completed .step-circle {
+        background: linear-gradient(135deg, #00ff88, #00d4ff);
+        border-color: transparent;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb" style="background: transparent;">
+            <li class="breadcrumb-item"><a href="{{ url_for('files_list') }}" class="text-info">Files</a></li>
+            <li class="breadcrumb-item active">Upload File</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step-item active" id="step1">
+                    <div class="step-circle">1</div>
+                    <small>Select File</small>
+                </div>
+                <div class="step-item" id="step2">
+                    <div class="step-circle">2</div>
+                    <small>QKD Key</small>
+                </div>
+                <div class="step-item" id="step3">
+                    <div class="step-circle">3</div>
+                    <small>Encrypt</small>
+                </div>
+                <div class="step-item" id="step4">
+                    <div class="step-circle">4</div>
+                    <small>Complete</small>
+                </div>
+            </div>
+
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h4 class="mb-0">
+                        <i class="fas fa-upload me-2"></i>Upload & Encrypt File
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form id="uploadForm" enctype="multipart/form-data">
+                        <!-- File Selection -->
+                        <div id="fileSelectSection">
+                            <div class="upload-zone" id="dropZone">
+                                <input type="file" id="fileInput" name="file" style="display: none;" required>
+                                <i class="fas fa-cloud-upload-alt fa-4x text-secondary mb-3"></i>
+                                <h5>Drop your file here</h5>
+                                <p class="text-secondary mb-2">or click to browse</p>
+                                <small class="text-secondary">Supported: Images, Documents, PDFs (Max 16MB)</small>
+                            </div>
+                            <img id="previewImage" class="upload-preview" alt="Preview">
+                            <div id="fileInfo" class="mt-3 text-center" style="display: none;">
+                                <div class="d-flex justify-content-center align-items-center gap-3">
+                                    <i class="fas fa-file fa-2x text-info"></i>
+                                    <div>
+                                        <strong id="fileName"></strong>
+                                        <div class="text-secondary small" id="fileSize"></div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" id="removeFile">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- QKD Key Selection -->
+                        <div id="keySelectSection" class="mt-4">
+                            <label class="form-label">Encryption Key</label>
+                            <div class="row g-3">
+                                <div class="col-md-8">
+                                    <select name="key_id" id="keySelect" class="form-control form-control-quantum">
+                                        <option value="">-- Generate New QKD Key --</option>
+                                        {% for key in available_keys %}
+                                        <option value="{{ key['key_id'] }}" data-hash="{{ key['key_hash'] }}">
+                                            {{ key['key_hash'] }} ({{ key['key_type'] }})
+                                        </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <button type="button" class="btn btn-outline-info w-100" id="generateKeyBtn">
+                                        <i class="fas fa-atom me-2"></i>Generate
+                                    </button>
+                                </div>
+                            </div>
+                            <small class="text-secondary">
+                                Files will be encrypted using AES-256 with a QKD-derived key
+                            </small>
+                        </div>
+
+                        <!-- Options -->
+                        <div class="mt-4">
+                            <label class="form-label">Options</label>
+                            <div class="p-3" style="background: rgba(0, 0, 0, 0.3); border-radius: 12px;">
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="generateQr" 
+                                           name="generate_qr" checked>
+                                    <label class="form-check-label" for="generateQr">
+                                        <i class="fas fa-qrcode me-2"></i>Generate QR code for access
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch mb-3">
+                                    <input class="form-check-input" type="checkbox" id="requireApproval" 
+                                           name="require_approval" checked>
+                                    <label class="form-check-label" for="requireApproval">
+                                        <i class="fas fa-user-check me-2"></i>Require approval for access requests
+                                    </label>
+                                </div>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="emailNotify" 
+                                           name="email_notify" checked>
+                                    <label class="form-check-label" for="emailNotify">
+                                        <i class="fas fa-envelope me-2"></i>Send access key via email after approval
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Encryption Progress -->
+                        <div class="encryption-progress mt-4" id="encryptionProgress">
+                            <h5 class="mb-3">
+                                <span class="spinner-border spinner-border-sm me-2"></span>
+                                Encrypting File...
+                            </h5>
+                            <div class="progress mb-2" style="height: 10px; background: var(--card-bg);">
+                                <div class="progress-bar" id="uploadProgressBar" style="width: 0%; background: var(--primary-gradient);"></div>
+                            </div>
+                            <div id="encryptionStatus" class="text-secondary small"></div>
+                        </div>
+
+                        <hr style="border-color: var(--border-color);">
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('files_list') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-quantum" id="uploadBtn" disabled>
+                                <i class="fas fa-lock me-2"></i>Encrypt & Upload
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Success Result -->
+            <div class="card-quantum mt-4" id="successCard" style="display: none;">
+                <div class="card-body p-4 text-center">
+                    <i class="fas fa-check-circle fa-4x text-success mb-3"></i>
+                    <h4>File Encrypted Successfully!</h4>
+                    <p class="text-secondary">Your file has been encrypted with QKD-derived keys</p>
+                    
+                    <div class="row g-4 mt-4">
+                        <div class="col-md-6">
+                            <div class="p-3" style="background: rgba(0, 0, 0, 0.3); border-radius: 12px;">
+                                <h6>Key Hash</h6>
+                                <code id="resultKeyHash" class="text-info"></code>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3" style="background: rgba(0, 0, 0, 0.3); border-radius: 12px;">
+                                <h6>File ID</h6>
+                                <code id="resultFileId" class="text-info"></code>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="qrCodeResult" class="mt-4" style="display: none;">
+                        <h6>Access QR Code</h6>
+                        <img id="resultQrCode" src="" alt="QR Code" 
+                             style="background: white; padding: 1rem; border-radius: 8px; max-width: 200px;">
+                        <p class="text-secondary small mt-2">
+                            Share this QR code. Users can scan it to request access.
+                        </p>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <a href="{{ url_for('files_list') }}" class="btn btn-quantum">
+                            <i class="fas fa-folder me-2"></i>View My Files
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedFile = null;
+
+$(document).ready(function() {
+    const dropZone = document.getElementById('dropZone');
+    const fileInput = document.getElementById('fileInput');
+    
+    // Click to browse
+    dropZone.addEventListener('click', () => fileInput.click());
+    
+    // Drag and drop
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+    });
+    
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.classList.remove('dragover');
+    });
+    
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            handleFile(e.dataTransfer.files[0]);
+        }
+    });
+    
+    // File input change
+    fileInput.addEventListener('change', function() {
+        if (this.files.length) {
+            handleFile(this.files[0]);
+        }
+    });
+    
+    function handleFile(file) {
+        if (file.size > 16 * 1024 * 1024) {
+            alert('File size exceeds 16MB limit');
+            return;
+        }
+        
+        selectedFile = file;
+        $('#fileName').text(file.name);
+        $('#fileSize').text((file.size / 1024).toFixed(2) + ' KB');
+        $('#fileInfo').show();
+        $('#uploadBtn').prop('disabled', false);
+        
+        // Show preview for images
+        if (file.type.startsWith('image/')) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                $('#previewImage').attr('src', e.target.result).show();
+            };
+            reader.readAsDataURL(file);
+        } else {
+            $('#previewImage').hide();
+        }
+        
+        updateSteps(1);
+    }
+    
+    // Remove file
+    $('#removeFile').click(function() {
+        selectedFile = null;
+        fileInput.value = '';
+        $('#fileInfo').hide();
+        $('#previewImage').hide();
+        $('#uploadBtn').prop('disabled', true);
+        updateSteps(0);
+    });
+    
+    // Generate key
+    $('#generateKeyBtn').click(function() {
+        $(this).prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span>');
+        
+        $.ajax({
+            url: '{{ url_for("api_qkd_generate") }}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({ key_length: 256, key_type: 'file' }),
+            success: function(response) {
+                if (response.success) {
+                    const newOption = $('<option>')
+                        .val(response.key_id)
+                        .text(`${response.key_hash} (file)`)
+                        .data('hash', response.key_hash);
+                    
+                    $('#keySelect').append(newOption).val(response.key_id);
+                    updateSteps(2);
+                } else {
+                    alert('Error: ' + response.error);
+                }
+            },
+            error: function() {
+                alert('Failed to generate key');
+            },
+            complete: function() {
+                $('#generateKeyBtn').prop('disabled', false).html('<i class="fas fa-atom me-2"></i>Generate');
+            }
+        });
+    });
+    
+    // Key selection
+    $('#keySelect').change(function() {
+        if ($(this).val()) {
+            updateSteps(2);
+        }
+    });
+    
+    // Form submission
+    $('#uploadForm').submit(function(e) {
+        e.preventDefault();
+        
+        if (!selectedFile) {
+            alert('Please select a file');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('file', selectedFile);
+        formData.append('keywords', '');
+        formData.append('description', '');
+        
+        $('#uploadBtn').prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Encrypting...');
+        $('#encryptionProgress').show();
+        updateSteps(3);
+        
+        const encryptionSteps = [
+            'Preparing file for encryption...',
+            'Generating QKD key using BB84 protocol...',
+            'Applying quantum-derived encryption...',
+            'Encrypting data with AES-256...',
+            'Generating QR code for access...',
+            'Saving encrypted file...',
+            'Finalizing...'
+        ];
+        
+        let stepIndex = 0;
+        const stepInterval = setInterval(function() {
+            if (stepIndex < encryptionSteps.length) {
+                const progress = ((stepIndex + 1) / encryptionSteps.length) * 80;
+                $('#uploadProgressBar').css('width', progress + '%');
+                $('#encryptionStatus').text(encryptionSteps[stepIndex]);
+                stepIndex++;
+            }
+        }, 500);
+        
+        $.ajax({
+            url: '{{ url_for("upload_file") }}',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            success: function(response) {
+                clearInterval(stepInterval);
+                $('#uploadProgressBar').css('width', '100%');
+                
+                if (response.success) {
+                    $('#encryptionStatus').html('<span class="text-success"><i class="fas fa-check me-2"></i>Encryption complete!</span>');
+                    updateSteps(4);
+                    
+                    // Show success
+                    setTimeout(function() {
+                        $('#uploadForm').parent().hide();
+                        $('#resultKeyHash').text(response.key_hash || 'Generated');
+                        $('#resultFileId').text((response.file_id || '').substring(0, 20) + '...');
+                        
+                        if (response.qr_code_path) {
+                            $('#resultQrCode').attr('src', '/static/' + response.qr_code_path);
+                            $('#qrCodeResult').show();
+                        }
+                        
+                        $('#successCard').show();
+                    }, 500);
+                } else {
+                    $('#encryptionStatus').html('<span class="text-danger"><i class="fas fa-exclamation-circle me-2"></i>' + (response.error || 'Upload failed') + '</span>');
+                    $('#uploadBtn').prop('disabled', false).html('<i class="fas fa-lock me-2"></i>Encrypt & Upload');
+                }
+            },
+            error: function(xhr) {
+                clearInterval(stepInterval);
+                // Check if redirect (server returned HTML)
+                if (xhr.status === 200 || xhr.status === 302) {
+                    // Server might have redirected, just reload
+                    window.location.href = '{{ url_for("files_list") }}';
+                    return;
+                }
+                $('#encryptionStatus').html('<span class="text-danger"><i class="fas fa-exclamation-circle me-2"></i>Upload failed. Please try again.</span>');
+                $('#uploadBtn').prop('disabled', false).html('<i class="fas fa-lock me-2"></i>Encrypt & Upload');
+            }
+        });
+    });
+    
+    function updateSteps(current) {
+        for (let i = 1; i <= 4; i++) {
+            const step = $(`#step${i}`);
+            step.removeClass('active completed');
+            if (i < current) {
+                step.addClass('completed');
+            } else if (i === current) {
+                step.addClass('active');
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

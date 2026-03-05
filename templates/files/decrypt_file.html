@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+
+{% block title %}Decrypt File - Quantum IoT Security{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h4 class="mb-0">
+                        <i class="fas fa-unlock me-2"></i>
+                        Decrypt File
+                    </h4>
+                    <p class="text-secondary mb-0 mt-2 small">
+                        Upload an encrypted file and provide the quantum key to decrypt it
+                    </p>
+                </div>
+                <div class="card-body p-4">
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+
+                    <!-- Tab Navigation -->
+                    <ul class="nav nav-pills mb-4" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="file-id-tab" data-bs-toggle="pill" data-bs-target="#file-id-method" type="button" role="tab">
+                                <i class="fas fa-fingerprint me-2"></i>File ID + Key
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="upload-tab" data-bs-toggle="pill" data-bs-target="#upload-method" type="button" role="tab">
+                                <i class="fas fa-file-upload me-2"></i>Upload File
+                            </button>
+                        </li>
+                    </ul>
+
+                    <!-- Tab Content -->
+                    <div class="tab-content">
+                        <!-- Method 1: File ID + Quantum Key -->
+                        <div class="tab-pane fade show active" id="file-id-method" role="tabpanel">
+                            <div class="alert alert-info mb-4" style="background: rgba(0, 180, 216, 0.1); border-color: rgba(0, 180, 216, 0.3);">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Decrypt with File ID:</strong> Enter the File ID and Quantum Key you received via email after your access request was approved.
+                            </div>
+
+                            <form method="POST" action="{{ url_for('decrypt_file') }}">
+                                <div class="mb-4">
+                                    <label for="file_id" class="form-label">
+                                        <i class="fas fa-barcode me-2"></i>
+                                        File ID
+                                    </label>
+                                    <input type="text" 
+                                           class="form-control form-control-quantum" 
+                                           id="file_id" 
+                                           name="file_id" 
+                                           required 
+                                           placeholder="Enter the file ID from your email"
+                                           style="font-family: 'JetBrains Mono', monospace;">
+                                    <small class="text-secondary mt-2 d-block">
+                                        <i class="fas fa-envelope me-1"></i>
+                                        File ID is provided in the approval email
+                                    </small>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label for="quantum_key_id" class="form-label">
+                                        <i class="fas fa-key me-2"></i>
+                                        Quantum Decryption Key
+                                    </label>
+                                    <div class="input-group">
+                                        <span class="input-group-text" style="background: rgba(102, 126, 234, 0.1); border-color: var(--border-color); color: var(--text-secondary);">
+                                            <i class="fas fa-fingerprint"></i>
+                                        </span>
+                                        <input type="password" 
+                                               class="form-control form-control-quantum" 
+                                               id="quantum_key_id" 
+                                               name="quantum_key" 
+                                               required 
+                                               placeholder="Enter the quantum key from email"
+                                               style="font-family: 'JetBrains Mono', monospace;">
+                                        <button class="btn btn-outline-secondary" type="button" id="toggleKeyId" 
+                                                style="background: rgba(102, 126, 234, 0.1); border-color: var(--border-color); color: var(--text-secondary);">
+                                            <i class="fas fa-eye" id="toggleIconId"></i>
+                                        </button>
+                                    </div>
+                                    <small class="text-secondary mt-2 d-block">
+                                        <i class="fas fa-shield-alt me-1"></i>
+                                        Quantum key is included in the access approval email
+                                    </small>
+                                </div>
+
+                                <div class="d-grid gap-2">
+                                    <button type="submit" class="btn btn-quantum decrypt-btn">
+                                        <i class="fas fa-unlock-alt me-2"></i>
+                                        Decrypt & Download File
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Method 2: Upload Encrypted File -->
+                        <div class="tab-pane fade" id="upload-method" role="tabpanel">
+                            <div class="alert alert-info mb-4" style="background: rgba(0, 180, 216, 0.1); border-color: rgba(0, 180, 216, 0.3);">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Upload & Decrypt:</strong> Upload an encrypted file and provide the quantum key to decrypt it.
+                            </div>
+
+                            <form method="POST" action="{{ url_for('decrypt_file') }}" enctype="multipart/form-data">
+                        <div class="mb-4">
+                            <label for="encrypted_file" class="form-label">
+                                <i class="fas fa-file-upload me-2"></i>
+                                Encrypted File
+                            </label>
+                            <input type="file" 
+                                   class="form-control form-control-quantum" 
+                                   id="encrypted_file" 
+                                   name="encrypted_file" 
+                                   required>
+                            <small class="text-secondary mt-2 d-block">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Select the quantum-encrypted file you want to decrypt
+                            </small>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="decryption_key" class="form-label">
+                                <i class="fas fa-key me-2"></i>
+                                Quantum Decryption Key
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text" style="background: rgba(102, 126, 234, 0.1); border-color: var(--border-color); color: var(--text-secondary);">
+                                    <i class="fas fa-fingerprint"></i>
+                                </span>
+                                <input type="password" 
+                                       class="form-control form-control-quantum" 
+                                       id="decryption_key" 
+                                       name="decryption_key" 
+                                       required 
+                                       placeholder="Enter the quantum key"
+                                       style="font-family: 'JetBrains Mono', monospace;">
+                                <button class="btn btn-outline-secondary" type="button" id="toggleKey" 
+                                        style="background: rgba(102, 126, 234, 0.1); border-color: var(--border-color); color: var(--text-secondary);">
+                                    <i class="fas fa-eye" id="toggleIcon"></i>
+                                </button>
+                            </div>
+                            <small class="text-secondary mt-2 d-block">
+                                <i class="fas fa-shield-alt me-1"></i>
+                                Use the quantum key that was provided when the file was encrypted
+                            </small>
+                        </div>
+
+                        <div class="alert alert-warning" style="background: rgba(255, 193, 7, 0.1); border-color: rgba(255, 193, 7, 0.3);">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Security Note:</strong> Ensure you're using the correct quantum key. Incorrect keys will fail decryption.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-quantum decrypt-btn">
+                                <i class="fas fa-unlock-alt me-2"></i>
+                                Decrypt File
+                            </button>
+                        </div>
+                    </form>
+                        </div>
+                    </div>
+
+                    <!-- Back Button -->
+                    <div class="text-center mt-4">
+                        <a href="{{ url_for('files_list') }}" class="btn btn-outline-quantum">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back to Files
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Security Features -->
+            <div class="text-center mt-4">
+                <div class="d-flex justify-content-center gap-4 flex-wrap">
+                    <div class="text-secondary small">
+                        <i class="fas fa-shield-alt me-2" style="color: #00ff88;"></i>
+                        Quantum Secure
+                    </div>
+                    <div class="text-secondary small">
+                        <i class="fas fa-lock me-2" style="color: #00b4d8;"></i>
+                        AES-256 Encryption
+                    </div>
+                    <div class="text-secondary small">
+                        <i class="fas fa-key me-2" style="color: #764ba2;"></i>
+                        BB84 Protocol
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle password visibility for File ID method
+document.getElementById('toggleKeyId').addEventListener('click', function() {
+    const keyInput = document.getElementById('quantum_key_id');
+    const icon = document.getElementById('toggleIconId');
+    
+    if (keyInput.type === 'password') {
+        keyInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        keyInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+});
+
+// Toggle password visibility for Upload method
+document.getElementById('toggleKey').addEventListener('click', function() {
+    const keyInput = document.getElementById('decryption_key');
+    const icon = document.getElementById('toggleIcon');
+    
+    if (keyInput.type === 'password') {
+        keyInput.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        keyInput.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+});
+
+/* ── Decrypt button feedback (prevents "infinite loop" feeling) ── */
+document.querySelectorAll('form').forEach(form => {
+    form.addEventListener('submit', function () {
+        const btn = form.querySelector('.decrypt-btn');
+        if (!btn || btn.dataset.busy) return;
+        btn.dataset.busy = '1';
+        btn.disabled = true;
+        const orig = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Decrypting\u2026';
+        setTimeout(() => {
+            btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Download Started!';
+            btn.classList.remove('btn-quantum');
+            btn.classList.add('btn-success');
+            setTimeout(() => {
+                btn.innerHTML = orig;
+                btn.classList.remove('btn-success');
+                btn.classList.add('btn-quantum');
+                btn.disabled = false;
+                delete btn.dataset.busy;
+            }, 4000);
+        }, 3000);
+    });
+});
+</script>
+{% endblock %}

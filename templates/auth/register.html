@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Register - Quantum IoT Security{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card-quantum quantum-glow">
+                <div class="card-header-quantum text-center">
+                    <i class="fas fa-user-plus fa-3x mb-3" style="color: #667eea;"></i>
+                    <h3 class="mb-0">Create Account</h3>
+                    <p class="text-secondary mb-0 mt-2">Join the quantum-secured IoT network</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('register') }}">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-user me-2"></i>Username
+                                </label>
+                                <input type="text" name="username" class="form-control form-control-quantum" 
+                                       placeholder="Choose a username" required>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-envelope me-2"></i>Email
+                                </label>
+                                <input type="email" name="email" class="form-control form-control-quantum" 
+                                       placeholder="Enter your email" required>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Password
+                                </label>
+                                <input type="password" name="password" class="form-control form-control-quantum" 
+                                       placeholder="Create password" required minlength="6">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-lock me-2"></i>Confirm Password
+                                </label>
+                                <input type="password" name="confirm_password" class="form-control form-control-quantum" 
+                                       placeholder="Confirm password" required minlength="6">
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-phone me-2"></i>Phone (Optional)
+                                </label>
+                                <input type="tel" name="phone" class="form-control form-control-quantum" 
+                                       placeholder="Your phone number">
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">
+                                    <i class="fas fa-map-marker-alt me-2"></i>Address (Optional)
+                                </label>
+                                <input type="text" name="address" class="form-control form-control-quantum" 
+                                       placeholder="Your address">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" id="terms" required>
+                                <label class="form-check-label text-secondary" for="terms">
+                                    I agree to the Terms of Service and Privacy Policy
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-quantum btn-lg">
+                                <i class="fas fa-rocket me-2"></i>Create Account
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-4">
+                        <p class="text-secondary mb-0">
+                            Already have an account? 
+                            <a href="{{ url_for('login') }}" class="text-decoration-none" style="color: #667eea;">
+                                Sign in
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

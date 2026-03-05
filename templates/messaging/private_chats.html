@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}Private Chats - Quantum IoT Security{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="fas fa-comments me-2"></i>
+                Private Chats
+            </h2>
+            <p class="text-secondary">Quantum-encrypted one-on-one messaging</p>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="row">
+        <!-- Start New Chat -->
+        <div class="col-lg-4 mb-4">
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-user-plus me-2"></i>
+                        Start New Chat
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if users %}
+                    <div class="list-group list-group-flush" style="max-height: 400px; overflow-y: auto;">
+                        {% for user in users %}
+                        <a href="{{ url_for('start_private_chat', user_id=user['id']) }}" 
+                           class="list-group-item list-group-item-action"
+                           style="background: rgba(255, 255, 255, 0.03); border-color: var(--border-color); color: var(--text-primary); margin-bottom: 8px; border-radius: 8px;">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                         style="width: 40px; height: 40px; background: var(--primary-gradient);">
+                                        <i class="fas fa-user"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0">{{ user['username'] }}</h6>
+                                    <small class="text-secondary">{{ user['email'] }}</small>
+                                </div>
+                                <div class="flex-shrink-0">
+                                    <i class="fas fa-chevron-right text-secondary"></i>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-secondary text-center mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        No users available
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Chats -->
+        <div class="col-lg-8">
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-inbox me-2"></i>
+                        Your Conversations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if chats %}
+                    <div class="list-group list-group-flush">
+                        {% for chat in chats %}
+                        <div class="list-group-item d-flex align-items-center"
+                           style="background: rgba(255, 255, 255, 0.03); border-color: var(--border-color); color: var(--text-primary); margin-bottom: 12px; border-radius: 10px;">
+                            <a href="{{ url_for('view_private_chat', chat_id=chat['chat_id']) }}" 
+                               class="d-flex align-items-center flex-grow-1 text-decoration-none" style="color: var(--text-primary);">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                         style="width: 50px; height: 50px; background: var(--primary-gradient);">
+                                        <i class="fas fa-user fa-lg"></i>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ chat['other_user'] }}</h6>
+                                            <small class="text-secondary">
+                                                <i class="fas fa-shield-alt me-1" style="color: #00ff88;"></i>
+                                                Quantum Encrypted
+                                            </small>
+                                        </div>
+                                        <small class="text-secondary">
+                                            {{ chat['created_at'][:10] }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </a>
+                            <div class="flex-shrink-0 ms-3 d-flex align-items-center gap-2">
+                                <a href="{{ url_for('view_private_chat', chat_id=chat['chat_id']) }}" class="btn btn-sm btn-outline-info" title="Open chat">
+                                    <i class="fas fa-chevron-right"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-danger delete-chat-btn" data-chat-id="{{ chat['chat_id'] }}" data-other-user="{{ chat['other_user'] }}" title="Delete chat">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-comments fa-4x mb-3" style="color: var(--text-secondary);"></i>
+                        <h5>No conversations yet</h5>
+                        <p class="text-secondary">Start a new chat with someone from the list on the left</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    $('.delete-chat-btn').click(function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const chatId = $(this).data('chat-id');
+        const otherUser = $(this).data('other-user');
+        const btn = $(this);
+        
+        if (confirm(`Delete your conversation with ${otherUser}? This will permanently delete all messages and files in this chat.`)) {
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+            $.ajax({
+                url: `/api/chat/${chatId}/delete`,
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        btn.closest('.list-group-item').fadeOut(300, function() { $(this).remove(); });
+                    } else {
+                        alert('Error: ' + (response.error || 'Failed to delete chat'));
+                        btn.prop('disabled', false).html('<i class="fas fa-trash"></i>');
+                    }
+                },
+                error: function() {
+                    alert('Failed to delete chat. Please try again.');
+                    btn.prop('disabled', false).html('<i class="fas fa-trash"></i>');
+                }
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

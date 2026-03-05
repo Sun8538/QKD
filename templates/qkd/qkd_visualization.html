@@ -1,0 +1,434 @@
+{% extends "base.html" %}
+{% block title %}QKD Visualization - Quantum IoT Security{% endblock %}
+
+{% block extra_css %}
+<style>
+    .viz-step {
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 16px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    .viz-step.active {
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+    }
+    .viz-step.completed {
+        border-color: var(--accent-green);
+    }
+    .step-number {
+        width: 36px;
+        height: 36px;
+        background: var(--primary-gradient);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 0.9rem;
+    }
+    .step-number.completed {
+        background: linear-gradient(135deg, #00ff88, #00d4ff);
+    }
+    .bit-display {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+        padding: 0.75rem;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 8px;
+        word-break: break-all;
+        margin-top: 0.5rem;
+    }
+    .basis-indicator {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        margin: 2px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        font-weight: bold;
+    }
+    .basis-rectilinear {
+        background: rgba(102, 126, 234, 0.3);
+        color: #667eea;
+    }
+    .basis-diagonal {
+        background: rgba(240, 147, 251, 0.3);
+        color: #f093fb;
+    }
+    .basis-match {
+        background: rgba(0, 255, 136, 0.3);
+        color: #00ff88;
+    }
+    .basis-mismatch {
+        background: rgba(255, 107, 107, 0.3);
+        color: #ff6b6b;
+    }
+    .qubit-state {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0.5rem;
+        margin: 4px;
+        background: rgba(0, 0, 0, 0.3);
+        border-radius: 8px;
+        font-size: 0.75rem;
+    }
+    .qubit-state .state-symbol {
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+    .qber-meter {
+        height: 30px;
+        background: linear-gradient(90deg, #00ff88, #ffdd44, #ff6b6b);
+        border-radius: 15px;
+        position: relative;
+        overflow: hidden;
+    }
+    .qber-indicator {
+        position: absolute;
+        top: 0;
+        width: 4px;
+        height: 100%;
+        background: white;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+        transition: left 0.5s ease;
+    }
+    .key-final {
+        font-family: 'Courier New', monospace;
+        font-size: 1rem;
+        padding: 1rem;
+        background: linear-gradient(135deg, rgba(0, 255, 136, 0.1), rgba(0, 212, 255, 0.1));
+        border: 1px solid var(--accent-green);
+        border-radius: 12px;
+        word-break: break-all;
+        text-align: center;
+    }
+    .step-animation {
+        animation: stepPulse 0.5s ease;
+    }
+    @keyframes stepPulse {
+        0% { transform: scale(0.95); opacity: 0.5; }
+        100% { transform: scale(1); opacity: 1; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb" style="background: transparent;">
+            <li class="breadcrumb-item"><a href="{{ url_for('qkd_home') }}" class="text-info">QKD Keys</a></li>
+            <li class="breadcrumb-item active">Visualization</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card-quantum mb-4">
+                <div class="card-header-quantum d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-atom me-2"></i>BB84 Protocol Visualization
+                    </h4>
+                    <button class="btn btn-sm btn-outline-info" id="replayBtn">
+                        <i class="fas fa-redo me-2"></i>Replay
+                    </button>
+                </div>
+                <div class="card-body p-4">
+                    {% if visualization_steps %}
+                    <div id="visualizationContainer">
+                        {% for step in visualization_steps %}
+                        <div class="viz-step" id="step-{{ loop.index }}" data-step="{{ loop.index }}">
+                            <div class="d-flex align-items-start">
+                                <div class="step-number me-3" id="step-num-{{ loop.index }}">{{ step.step or loop.index }}</div>
+                                <div class="flex-grow-1">
+                                    <h5 class="mb-2">{{ step.name or step.step }}</h5>
+                                    <p class="text-secondary mb-2">{{ step.description }}</p>
+                                    
+                                    {% if step.data %}
+                                    <div class="step-data mt-3">
+                                        {% if step.data.alice_bits is defined %}
+                                        <div class="mb-2">
+                                            <strong class="text-info">Alice's Bits:</strong>
+                                            <div class="bit-display">{{ step.data.alice_bits|join('') }}</div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if step.data.alice_bases is defined %}
+                                        <div class="mb-2">
+                                            <strong class="text-info">Alice's Bases:</strong>
+                                            <div class="mt-1">
+                                                {% for base in step.data.alice_bases %}
+                                                <span class="basis-indicator {% if base == 0 %}basis-rectilinear{% else %}basis-diagonal{% endif %}">
+                                                    {% if base == 0 %}+{% else %}×{% endif %}
+                                                </span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if step.data.bob_bases is defined %}
+                                        <div class="mb-2">
+                                            <strong class="text-info">Bob's Bases:</strong>
+                                            <div class="mt-1">
+                                                {% for base in step.data.bob_bases %}
+                                                <span class="basis-indicator {% if base == 0 %}basis-rectilinear{% else %}basis-diagonal{% endif %}">
+                                                    {% if base == 0 %}+{% else %}×{% endif %}
+                                                </span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if step.data.qubits is defined %}
+                                        <div class="mb-2">
+                                            <strong class="text-info">Encoded Qubits:</strong>
+                                            <div class="mt-1 d-flex flex-wrap">
+                                                {% for qubit in step.data.qubits[:20] %}
+                                                <div class="qubit-state">
+                                                    <span class="state-symbol">{{ qubit.state }}</span>
+                                                    <small>{{ qubit.label }}</small>
+                                                </div>
+                                                {% endfor %}
+                                                {% if step.data.qubits|length > 20 %}
+                                                <div class="qubit-state">
+                                                    <span class="state-symbol">...</span>
+                                                    <small>+{{ step.data.qubits|length - 20 }}</small>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if step.data.bob_measurements is defined %}
+                                        <div class="mb-2">
+                                            <strong class="text-info">Bob's Measurements:</strong>
+                                            <div class="bit-display">{{ step.data.bob_measurements|join('') }}</div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if step.data.matching_bases is defined %}
+                                        <div class="mb-2">
+                                            <strong class="text-info">Basis Comparison:</strong>
+                                            <div class="mt-1">
+                                                {% for match in step.data.matching_bases %}
+                                                <span class="basis-indicator {% if match %}basis-match{% else %}basis-mismatch{% endif %}">
+                                                    {% if match %}✓{% else %}✗{% endif %}
+                                                </span>
+                                                {% endfor %}
+                                            </div>
+                                            <small class="text-secondary">
+                                                Matching: {{ step.data.matching_count }} / {{ step.data.matching_bases|length }}
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if step.data.sifted_key is defined %}
+                                        <div class="mb-2">
+                                            <strong class="text-info">Sifted Key:</strong>
+                                            <div class="bit-display">{{ step.data.sifted_key|join('') }}</div>
+                                            <small class="text-secondary">Length: {{ step.data.sifted_key|length }} bits</small>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if step.data.error_rate is defined and step.data.error_rate is number %}
+                                        <div class="mb-2">
+                                            <strong class="text-info">Quantum Bit Error Rate (QBER):</strong>
+                                            <div class="qber-meter mt-2">
+                                                <div class="qber-indicator" style="left: {{ (step.data.error_rate * 100 / 15) * 100 }}%;"></div>
+                                            </div>
+                                            <div class="d-flex justify-content-between mt-1">
+                                                <small class="text-success">0%</small>
+                                                <strong class="{% if step.data.error_rate < 0.05 %}text-success{% elif step.data.error_rate < 0.11 %}text-warning{% else %}text-danger{% endif %}">
+                                                    {{ step.data.error_rate_percent if step.data.error_rate_percent is defined else "%.2f"|format(step.data.error_rate * 100) }}%
+                                                </strong>
+                                                <small class="text-danger">15%</small>
+                                            </div>
+                                            {% if step.data.error_rate > 0.11 %}
+                                            <div class="alert alert-danger mt-2 mb-0 py-2 px-3">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                                High error rate detected! Possible eavesdropping.
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        {% elif step.data.error_rate_percent is defined %}
+                                        <div class="mb-2">
+                                            <strong class="text-info">Quantum Bit Error Rate (QBER):</strong>
+                                            <div class="text-center mt-2">
+                                                <strong class="text-success">{{ step.data.error_rate_percent }}</strong>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                        
+                                        {% if step.data.final_key is defined %}
+                                        <div class="mb-2">
+                                            <strong class="text-success">Final Secure Key:</strong>
+                                            <div class="key-final mt-2">
+                                                {{ step.data.final_key }}
+                                            </div>
+                                            <small class="text-secondary">
+                                                Length: {{ step.data.final_key|length * 4 }} bits | 
+                                                Algorithm: SHA-256 Privacy Amplification
+                                            </small>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-exclamation-circle fa-4x text-warning mb-3"></i>
+                        <h5>No Visualization Data</h5>
+                        <p class="text-secondary">This key was generated without visualization steps.</p>
+                        <a href="{{ url_for('qkd_generate') }}" class="btn btn-quantum">
+                            <i class="fas fa-plus me-2"></i>Generate New Key with Visualization
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Key Details -->
+            <div class="card-quantum mb-4">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-key me-2"></i>Key Details
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <label class="text-secondary small">Key ID</label>
+                        <div><code class="text-info">{{ key_id }}</code></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-secondary small">Key Hash</label>
+                        <div class="key-display" style="padding: 0.5rem; font-size: 0.75rem;">{{ key_hash }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-secondary small">Error Rate</label>
+                        <div class="{% if error_rate < 0.05 %}text-success{% elif error_rate < 0.11 %}text-warning{% else %}text-danger{% endif %}">
+                            {{ "%.4f"|format(error_rate * 100) }}%
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="text-secondary small">Status</label>
+                        <div>
+                            {% if is_active %}
+                            <span class="badge badge-quantum badge-success">Active</span>
+                            {% else %}
+                            <span class="badge badge-quantum badge-danger">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <hr style="border-color: var(--border-color);">
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-outline-info btn-sm" id="copyKeyBtn">
+                            <i class="fas fa-copy me-2"></i>Copy Key Hash
+                        </button>
+                        <a href="{{ url_for('qkd_home') }}" class="btn btn-quantum btn-sm">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Keys
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Legend -->
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Legend
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="mb-3">
+                        <strong class="small">Bases:</strong>
+                        <div class="mt-1">
+                            <span class="basis-indicator basis-rectilinear me-2">+</span> Rectilinear (|0⟩, |1⟩)
+                        </div>
+                        <div class="mt-1">
+                            <span class="basis-indicator basis-diagonal me-2">×</span> Diagonal (|+⟩, |−⟩)
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <strong class="small">Comparison:</strong>
+                        <div class="mt-1">
+                            <span class="basis-indicator basis-match me-2">✓</span> Matching bases
+                        </div>
+                        <div class="mt-1">
+                            <span class="basis-indicator basis-mismatch me-2">✗</span> Different bases
+                        </div>
+                    </div>
+                    <div>
+                        <strong class="small">QBER Threshold:</strong>
+                        <div class="mt-1 small text-secondary">
+                            <div><span class="text-success">●</span> &lt;5% - Secure</div>
+                            <div><span class="text-warning">●</span> 5-11% - Caution</div>
+                            <div><span class="text-danger">●</span> &gt;11% - Possible Eve</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Animate steps on load
+    let delay = 0;
+    $('.viz-step').each(function() {
+        const step = $(this);
+        setTimeout(function() {
+            step.addClass('step-animation active');
+            setTimeout(function() {
+                step.removeClass('active').addClass('completed');
+                step.find('.step-number').addClass('completed');
+            }, 500);
+        }, delay);
+        delay += 300;
+    });
+    
+    // Replay animation
+    $('#replayBtn').click(function() {
+        $('.viz-step').removeClass('step-animation active completed');
+        $('.step-number').removeClass('completed');
+        
+        let delay = 0;
+        $('.viz-step').each(function() {
+            const step = $(this);
+            setTimeout(function() {
+                step.addClass('step-animation active');
+                setTimeout(function() {
+                    step.removeClass('active').addClass('completed');
+                    step.find('.step-number').addClass('completed');
+                }, 500);
+            }, delay);
+            delay += 300;
+        });
+    });
+    
+    // Copy key hash
+    $('#copyKeyBtn').click(function() {
+        const keyHash = '{{ key_hash }}';
+        navigator.clipboard.writeText(keyHash).then(function() {
+            $('#copyKeyBtn').html('<i class="fas fa-check me-2"></i>Copied!');
+            setTimeout(function() {
+                $('#copyKeyBtn').html('<i class="fas fa-copy me-2"></i>Copy Key Hash');
+            }, 2000);
+        });
+    });
+});
+</script>
+{% endblock %}

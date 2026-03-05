@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}Generate QKD Key - Quantum IoT Security{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb" style="background: transparent;">
+            <li class="breadcrumb-item"><a href="{{ url_for('qkd_home') }}" class="text-info">QKD Keys</a></li>
+            <li class="breadcrumb-item active">Generate New Key</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card-quantum">
+                <div class="card-header-quantum">
+                    <h4 class="mb-0">
+                        <i class="fas fa-atom me-2"></i>Generate Quantum Key (BB84 Protocol)
+                    </h4>
+                </div>
+                <div class="card-body p-4">
+                    <form id="generateKeyForm">
+                        <!-- Key Length -->
+                        <div class="mb-4">
+                            <label class="form-label">Key Length (bits)</label>
+                            <select name="key_length" class="form-control form-control-quantum">
+                                <option value="64">64 bits - Fast (For Testing)</option>
+                                <option value="128">128 bits - Standard</option>
+                                <option value="256" selected>256 bits - Recommended</option>
+                                <option value="512">512 bits - High Security</option>
+                                <option value="1024">1024 bits - Maximum Security</option>
+                            </select>
+                            <small class="text-secondary">Longer keys provide more security but take longer to generate</small>
+                        </div>
+
+                        <!-- Key Type -->
+                        <div class="mb-4">
+                            <label class="form-label">Key Purpose</label>
+                            <select name="key_type" class="form-control form-control-quantum">
+                                <option value="channel">Channel Encryption</option>
+                                <option value="file">File Encryption</option>
+                                <option value="private_chat">Private Chat</option>
+                                <option value="general">General Purpose</option>
+                            </select>
+                        </div>
+
+                        <!-- QBER Threshold -->
+                        <div class="mb-4">
+                            <label class="form-label">Error Rate Threshold (%)</label>
+                            <input type="range" class="form-range" name="qber_threshold" 
+                                   min="1" max="15" value="11" id="qberRange">
+                            <div class="d-flex justify-content-between">
+                                <small class="text-secondary">1% (Strict)</small>
+                                <small class="text-info" id="qberValue">11%</small>
+                                <small class="text-secondary">15% (Permissive)</small>
+                            </div>
+                            <small class="text-secondary">
+                                Keys with error rates above this threshold indicate possible eavesdropping
+                            </small>
+                        </div>
+
+                        <!-- Visualization Toggle -->
+                        <div class="mb-4">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="showVisualization" checked>
+                                <label class="form-check-label" for="showVisualization">
+                                    Show step-by-step visualization
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-quantum btn-lg w-100" id="generateBtn">
+                            <i class="fas fa-atom me-2"></i>Generate Quantum Key
+                        </button>
+                    </form>
+
+                    <!-- Generation Progress -->
+                    <div id="generationProgress" class="mt-4" style="display: none;">
+                        <h5 class="mb-3">
+                            <span class="spinner-border spinner-border-sm me-2"></span>
+                            BB84 Protocol Execution
+                        </h5>
+                        <div class="progress mb-3" style="height: 10px; background: var(--card-bg);">
+                            <div class="progress-bar" id="progressBar" style="width: 0%; background: var(--primary-gradient);"></div>
+                        </div>
+                        <div id="stepStatus" class="text-secondary"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Protocol Info -->
+            <div class="card-quantum mt-4">
+                <div class="card-header-quantum">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>About BB84 Protocol
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-1 me-2 text-info"></i>Quantum Bit Generation</h6>
+                            <p class="text-secondary small mb-3">
+                                Alice generates random bits and encodes them using randomly chosen bases 
+                                (rectilinear + or diagonal ×).
+                            </p>
+                            
+                            <h6><i class="fas fa-2 me-2 text-info"></i>Quantum Channel</h6>
+                            <p class="text-secondary small mb-3">
+                                Qubits are transmitted through a quantum channel. Any eavesdropping 
+                                disturbs the quantum states.
+                            </p>
+                            
+                            <h6><i class="fas fa-3 me-2 text-info"></i>Measurement</h6>
+                            <p class="text-secondary small mb-0">
+                                Bob measures received qubits using randomly chosen bases, keeping only 
+                                bits where bases match.
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6><i class="fas fa-4 me-2 text-info"></i>Key Sifting</h6>
+                            <p class="text-secondary small mb-3">
+                                Alice and Bob compare bases publicly and discard mismatched measurements, 
+                                creating a sifted key.
+                            </p>
+                            
+                            <h6><i class="fas fa-5 me-2 text-info"></i>Error Estimation</h6>
+                            <p class="text-secondary small mb-3">
+                                A subset of the key is compared to estimate quantum bit error rate (QBER). 
+                                High QBER indicates eavesdropping.
+                            </p>
+                            
+                            <h6><i class="fas fa-6 me-2 text-info"></i>Privacy Amplification</h6>
+                            <p class="text-secondary small mb-0">
+                                The final key is shortened using hash functions to eliminate any 
+                                information an eavesdropper might have.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // QBER range slider
+    $('#qberRange').on('input', function() {
+        $('#qberValue').text($(this).val() + '%');
+    });
+    
+    // Form submission
+    $('#generateKeyForm').submit(function(e) {
+        e.preventDefault();
+        
+        const formData = {
+            key_length: parseInt($('select[name="key_length"]').val()),
+            key_type: $('select[name="key_type"]').val(),
+            qber_threshold: parseInt($('#qberRange').val()) / 100,
+            show_visualization: $('#showVisualization').is(':checked')
+        };
+        
+        $('#generateBtn').prop('disabled', true).html(
+            '<span class="spinner-border spinner-border-sm me-2"></span>Generating...'
+        );
+        $('#generationProgress').show();
+        
+        // Simulate progress
+        let progress = 0;
+        const steps = [
+            'Generating random bits for Alice...',
+            'Selecting random bases...',
+            'Encoding qubits in quantum states...',
+            'Simulating quantum channel transmission...',
+            'Bob measuring received qubits...',
+            'Comparing measurement bases...',
+            'Sifting key from matching bases...',
+            'Estimating quantum bit error rate...',
+            'Performing privacy amplification...',
+            'Finalizing secure quantum key...'
+        ];
+        
+        let stepIndex = 0;
+        const progressInterval = setInterval(function() {
+            if (stepIndex < steps.length) {
+                progress = ((stepIndex + 1) / steps.length) * 90;
+                $('#progressBar').css('width', progress + '%');
+                $('#stepStatus').html('<i class="fas fa-cog fa-spin me-2"></i>' + steps[stepIndex]);
+                stepIndex++;
+            }
+        }, 300);
+        
+        $.ajax({
+            url: '{{ url_for("api_qkd_generate") }}',
+            method: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify(formData),
+            success: function(response) {
+                clearInterval(progressInterval);
+                $('#progressBar').css('width', '100%');
+                
+                if (response.success) {
+                    $('#stepStatus').html('<i class="fas fa-check-circle text-success me-2"></i>Key generated successfully!');
+                    
+                    setTimeout(function() {
+                        if ($('#showVisualization').is(':checked')) {
+                            window.location.href = '/qkd/visualize/' + response.key_id;
+                        } else {
+                            window.location.href = '{{ url_for("qkd_home") }}';
+                        }
+                    }, 1000);
+                } else {
+                    $('#stepStatus').html('<i class="fas fa-exclamation-circle text-danger me-2"></i>Error: ' + response.error);
+                    $('#generateBtn').prop('disabled', false).html('<i class="fas fa-atom me-2"></i>Generate Quantum Key');
+                }
+            },
+            error: function() {
+                clearInterval(progressInterval);
+                $('#stepStatus').html('<i class="fas fa-exclamation-circle text-danger me-2"></i>Failed to generate key');
+                $('#generateBtn').prop('disabled', false).html('<i class="fas fa-atom me-2"></i>Generate Quantum Key');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

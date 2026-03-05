@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>{{ device['device_name'] }} — Sensor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --dark-bg: #0f0f23;
+            --card-bg: #1a1a2e;
+            --accent-green: #00ff88;
+            --accent-blue: #00b4d8;
+            --border-color: #2a2a4a;
+            --text-primary: #e8e8f0;
+            --text-secondary: #8888aa;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh;
+            padding: 1rem;
+            padding-bottom: 5rem;
+        }
+
+        .page-header {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem;
+            margin: -1rem -1rem 1.5rem -1rem;
+            text-align: center;
+        }
+        .page-header h4 { font-size: 1rem; margin-bottom: 0.1rem; }
+        .page-header small { color: var(--text-secondary); font-size: 0.75rem; }
+
+        .sensor-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .sensor-card-title {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .sensor-card-title i { color: #667eea; }
+
+        .sensor-row {
+            display: flex;
+            justify-content: space-around;
+            text-align: center;
+        }
+        .sensor-val {
+            flex: 1;
+        }
+        .sensor-val .val {
+            font-size: 1.3rem;
+            font-weight: 700;
+            color: var(--accent-green);
+            font-family: monospace;
+        }
+        .sensor-val .lbl {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            margin-top: 0.2rem;
+        }
+
+        .status-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 0.75rem 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            z-index: 100;
+        }
+
+        .dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .dot-green { background: #00ff88; box-shadow: 0 0 6px #00ff88; }
+        .dot-yellow { background: #ffc107; box-shadow: 0 0 6px #ffc107; }
+        .dot-red { background: #f44; box-shadow: 0 0 6px #f44; }
+
+        .btn-send {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: #fff;
+            border-radius: 50px;
+            padding: 0.5rem 1.5rem;
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .btn-send:disabled { opacity: 0.5; }
+
+        .geo-detail {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+
+        .perm-banner {
+            background: rgba(255,193,7,0.12);
+            border: 1px solid rgba(255,193,7,0.3);
+            border-radius: 10px;
+            padding: 0.75rem;
+            font-size: 0.82rem;
+            color: #ffc107;
+            margin-bottom: 1rem;
+            display: none;
+            line-height: 1.5;
+        }
+        .perm-banner code {
+            color: #00b4d8;
+            font-size: 0.75rem;
+        }
+
+        .api-key-form {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+        .api-key-form label { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.4rem; display: block; }
+        .api-key-form input {
+            width: 100%;
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            padding: 0.55rem 0.75rem;
+            font-size: 0.85rem;
+            font-family: monospace;
+        }
+        .api-key-form input:focus { outline: none; border-color: #667eea; }
+
+        #sendCount { font-size: 0.75rem; color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+
+<div class="page-header">
+    <h4><i class="fas fa-microchip me-2" style="color:#667eea;"></i>{{ device['device_name'] }}</h4>
+    <small>Live sensor streaming over local WiFi</small>
+</div>
+
+<!-- Permission warning banner -->
+<div class="perm-banner" id="permBanner">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    <strong>Sensor data not available.</strong> This is normal on HTTP connections.<br>
+    <small>
+        • On <b>Android Chrome</b>: Sensors need HTTPS. Ask your admin to run the server with <code>--https</code> flag, then accept the certificate warning.<br>
+        • On <b>iOS Safari</b>: Tap "Motion & Orientation Access" in Settings &gt; Safari.<br>
+        • <b>Battery &amp; GPS</b> work on HTTP — tap "Enable GPS" below.
+    </small>
+</div>
+
+<!-- API Key input -->
+<div class="api-key-form" id="apiKeySection">
+    <label><i class="fas fa-key me-1"></i>API Key (from registration)</label>
+    <input type="password" id="apiKeyInput" placeholder="Paste your device API key here…"
+           autocomplete="off" spellcheck="false">
+    <div style="font-size:0.72rem; color: var(--text-secondary); margin-top:0.4rem;">
+        Key is stored only in memory — not saved to disk.
+    </div>
+</div>
+
+<!-- Accelerometer -->
+<div class="sensor-card">
+    <div class="sensor-card-title"><i class="fas fa-arrows-alt"></i> Accelerometer (m/s²)</div>
+    <div class="sensor-row">
+        <div class="sensor-val"><div class="val" id="ax">—</div><div class="lbl">X</div></div>
+        <div class="sensor-val"><div class="val" id="ay">—</div><div class="lbl">Y</div></div>
+        <div class="sensor-val"><div class="val" id="az">—</div><div class="lbl">Z</div></div>
+    </div>
+</div>
+
+<!-- Gyroscope -->
+<div class="sensor-card">
+    <div class="sensor-card-title"><i class="fas fa-sync-alt"></i> Gyroscope (°/s)</div>
+    <div class="sensor-row">
+        <div class="sensor-val"><div class="val" id="gx">—</div><div class="lbl">α</div></div>
+        <div class="sensor-val"><div class="val" id="gy">—</div><div class="lbl">β</div></div>
+        <div class="sensor-val"><div class="val" id="gz">—</div><div class="lbl">γ</div></div>
+    </div>
+</div>
+
+<!-- Orientation -->
+<div class="sensor-card">
+    <div class="sensor-card-title"><i class="fas fa-compass"></i> Orientation (°)</div>
+    <div class="sensor-row">
+        <div class="sensor-val"><div class="val" id="oa">—</div><div class="lbl">Alpha</div></div>
+        <div class="sensor-val"><div class="val" id="ob">—</div><div class="lbl">Beta</div></div>
+        <div class="sensor-val"><div class="val" id="og">—</div><div class="lbl">Gamma</div></div>
+    </div>
+</div>
+
+<!-- Geolocation -->
+<div class="sensor-card">
+    <div class="sensor-card-title"><i class="fas fa-map-marker-alt"></i> Geolocation
+        <button id="geoBtn" style="font-size:0.65rem; background:rgba(102,126,234,0.2);
+                border:1px solid #667eea; color:#667eea; border-radius:6px;
+                padding:0.15rem 0.5rem; cursor:pointer; margin-left:auto;">
+            Enable GPS
+        </button>
+    </div>
+    <div class="sensor-row">
+        <div class="sensor-val"><div class="val" id="glat">—</div><div class="lbl">Latitude</div></div>
+        <div class="sensor-val"><div class="val" id="glng">—</div><div class="lbl">Longitude</div></div>
+        <div class="sensor-val"><div class="val" id="galt">—</div><div class="lbl">Altitude (m)</div></div>
+    </div>
+    <div class="geo-detail" id="geoAccuracy"></div>
+</div>
+
+<!-- Battery -->
+<div class="sensor-card">
+    <div class="sensor-card-title"><i class="fas fa-battery-three-quarters"></i> Battery</div>
+    <div class="sensor-row">
+        <div class="sensor-val"><div class="val" id="bat">—</div><div class="lbl">Level</div></div>
+        <div class="sensor-val"><div class="val" id="batCharging">—</div><div class="lbl">Charging</div></div>
+    </div>
+</div>
+
+<!-- QKD Security Status -->
+<div class="sensor-card" id="qkdCard">
+    <div class="sensor-card-title"><i class="fas fa-atom"></i> Quantum Key Security</div>
+    <div style="text-align:center;padding:0.3rem 0;">
+        <span id="qkdBadge" style="
+            display:inline-block;
+            font-size:0.82rem;
+            border-radius:20px;
+            padding:0.4rem 1rem;
+            {% if has_qkd %}
+            background:rgba(0,255,136,0.15);color:#00ff88;border:1px solid rgba(0,255,136,0.3);
+            {% else %}
+            background:rgba(255,193,7,0.15);color:#ffc107;border:1px solid rgba(255,193,7,0.3);
+            {% endif %}">
+            {% if has_qkd %}
+                🔐 QKD Key Active — telemetry will be encrypted
+            {% else %}
+                ⚠ No QKD key — run handshake from device dashboard
+            {% endif %}
+        </span>
+    </div>
+    <div id="qkdAnimRow" style="display:none;text-align:center;margin-top:0.5rem;
+         font-size:0.75rem;color:#f093fb;letter-spacing:0.04em;">
+        <i class="fas fa-lock me-1"></i>Encrypting with QKD key…
+    </div>
+</div>
+
+<!-- Status bar -->
+<div class="status-bar">
+    <div>
+        <span class="dot" id="connDot" style="background:#555;"></span>
+        <span id="connLabel" style="font-size:0.8rem;">Waiting for key…</span>
+        &nbsp;
+        <span id="sendCount"></span>
+    </div>
+    <button class="btn-send" id="toggleBtn" onclick="toggleStreaming()" disabled>
+        <i class="fas fa-play me-1"></i>Start
+    </button>
+</div>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const DEVICE_UUID = "{{ device_uuid }}";
+let streaming    = false;
+let sendInterval = null;
+let sendCount    = 0;
+let apiKey       = '';
+let qkdActive    = {{ 'true' if has_qkd else 'false' }};
+// Sensor state
+const sensors = {
+    accel:   { x: null, y: null, z: null },
+    gyro:    { a: null, b: null, g: null },
+    orient:  { a: null, b: null, g: null },
+    geo:     { lat: null, lng: null, alt: null, acc: null },
+    battery: { level: null, charging: null }
+};
+
+// ─── Sensor Listeners ────────────────────────────────────────────────────────
+let motionListenerAdded = false;
+let orientListenerAdded = false;
+
+function initMotion() {
+    // iOS 13+ requires explicit permission request (must be triggered by user gesture)
+    if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+        DeviceMotionEvent.requestPermission()
+            .then(r => {
+                if (r === 'granted') { addMotionListener(); }
+                else { showPermBanner(); addMotionListener(); /* still try */ }
+            })
+            .catch(() => { showPermBanner(); addMotionListener(); });
+    } else {
+        // Android / desktop — no permission API needed
+        addMotionListener();
+    }
+
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+        DeviceOrientationEvent.requestPermission()
+            .then(r => { addOrientListener(); })
+            .catch(() => { addOrientListener(); });
+    } else {
+        addOrientListener();
+    }
+
+    // Auto-start geolocation
+    if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(pos => {
+            sensors.geo.lat = pos.coords.latitude;
+            sensors.geo.lng = pos.coords.longitude;
+            sensors.geo.alt = pos.coords.altitude;
+            sensors.geo.acc = pos.coords.accuracy;
+            txt('glat',  pos.coords.latitude.toFixed(5));
+            txt('glng',  pos.coords.longitude.toFixed(5));
+            txt('galt',  pos.coords.altitude != null ? pos.coords.altitude.toFixed(1) : '—');
+            document.getElementById('geoAccuracy').textContent =
+                'Accuracy: ±' + pos.coords.accuracy.toFixed(0) + ' m';
+        }, () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
+    }
+}
+
+function addMotionListener() {
+    if (motionListenerAdded) return;
+    motionListenerAdded = true;
+
+    let gotMotionData = false;
+    window.addEventListener('devicemotion', e => {
+        // Prefer acceleration, fallback to accelerationIncludingGravity
+        const a = (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null))
+                  ? e.acceleration
+                  : (e.accelerationIncludingGravity || {});
+        sensors.accel.x = a.x;
+        sensors.accel.y = a.y;
+        sensors.accel.z = a.z;
+        txt('ax', fmt(a.x));
+        txt('ay', fmt(a.y));
+        txt('az', fmt(a.z));
+
+        const r = e.rotationRate || {};
+        sensors.gyro.a = r.alpha;
+        sensors.gyro.b = r.beta;
+        sensors.gyro.g = r.gamma;
+        txt('gx', fmt(r.alpha));
+        txt('gy', fmt(r.beta));
+        txt('gz', fmt(r.gamma));
+
+        if (!gotMotionData && (a.x !== null || a.y !== null || r.alpha !== null)) {
+            gotMotionData = true;
+            // Hide permission banner if we actually got data
+            document.getElementById('permBanner').style.display = 'none';
+        }
+    }, true);
+
+    // If after 3 seconds we still have no data, show the permission tip
+    setTimeout(() => {
+        if (!gotMotionData) showPermBanner();
+    }, 3000);
+}
+
+function addOrientListener() {
+    if (orientListenerAdded) return;
+    orientListenerAdded = true;
+    window.addEventListener('deviceorientation', e => {
+        sensors.orient.a = e.alpha;
+        sensors.orient.b = e.beta;
+        sensors.orient.g = e.gamma;
+        txt('oa', fmt(e.alpha));
+        txt('ob', fmt(e.beta));
+        txt('og', fmt(e.gamma));
+    }, true);
+}
+
+document.getElementById('geoBtn').addEventListener('click', () => {
+    if (!navigator.geolocation) { alert('Geolocation not supported'); return; }
+    navigator.geolocation.watchPosition(pos => {
+        sensors.geo.lat = pos.coords.latitude;
+        sensors.geo.lng = pos.coords.longitude;
+        sensors.geo.alt = pos.coords.altitude;
+        sensors.geo.acc = pos.coords.accuracy;
+        txt('glat',  pos.coords.latitude.toFixed(5));
+        txt('glng',  pos.coords.longitude.toFixed(5));
+        txt('galt',  pos.coords.altitude != null ? pos.coords.altitude.toFixed(1) : '—');
+        document.getElementById('geoAccuracy').textContent =
+            'Accuracy: ±' + pos.coords.accuracy.toFixed(0) + ' m';
+    }, () => {}, { enableHighAccuracy: true, maximumAge: 5000 });
+});
+
+function initBattery() {
+    if (!navigator.getBattery) return;
+    navigator.getBattery().then(b => {
+        const update = () => {
+            sensors.battery.level   = b.level;
+            sensors.battery.charging = b.charging;
+            txt('bat', Math.round(b.level * 100) + '%');
+            txt('batCharging', b.charging ? '⚡ Yes' : 'No');
+        };
+        update();
+        b.addEventListener('levelchange',   update);
+        b.addEventListener('chargingchange', update);
+    });
+}
+
+// ─── API Key Validation ───────────────────────────────────────────────────────
+document.getElementById('apiKeyInput').addEventListener('input', function() {
+    apiKey = this.value.trim();
+    const btn = document.getElementById('toggleBtn');
+    if (apiKey.length >= 20) {
+        btn.disabled = false;
+        setConn('ready', '');
+    } else {
+        btn.disabled = true;
+        setConn('waiting', 'Waiting for key…');
+    }
+});
+
+// ─── Streaming ───────────────────────────────────────────────────────────────
+function toggleStreaming() {
+    if (streaming) {
+        stopStreaming();
+    } else {
+        startStreaming();
+    }
+}
+
+function startStreaming() {
+    if (!apiKey) { alert('Enter your API key first.'); return; }
+    streaming = true;
+    document.getElementById('toggleBtn').innerHTML = '<i class="fas fa-stop me-1"></i>Stop';
+    setConn('sending', 'Streaming…');
+    initMotion();
+    initBattery();
+    send(); // immediate first send
+    sendInterval = setInterval(send, 3000);
+}
+
+function stopStreaming() {
+    streaming = false;
+    clearInterval(sendInterval);
+    sendInterval = null;
+    document.getElementById('toggleBtn').innerHTML = '<i class="fas fa-play me-1"></i>Start';
+    setConn('ready', 'Stopped');
+}
+
+function send() {
+    const payload = {
+        accelerometer: { x: sensors.accel.x, y: sensors.accel.y, z: sensors.accel.z },
+        gyroscope:     { alpha: sensors.gyro.a, beta: sensors.gyro.b, gamma: sensors.gyro.g },
+        orientation:   { alpha: sensors.orient.a, beta: sensors.orient.b, gamma: sensors.orient.g },
+        geolocation:   { latitude: sensors.geo.lat, longitude: sensors.geo.lng,
+                          altitude: sensors.geo.alt, accuracy: sensors.geo.acc },
+        battery:       sensors.battery.level,
+        status:        'normal'
+    };
+
+    fetch('/api/iot/telemetry', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-API-Key': apiKey
+        },
+        body: JSON.stringify(payload)
+    })
+    .then(r => {
+        if (r.status === 403) {
+            stopStreaming();
+            setConn('error', 'Invalid API key');
+            alert('Invalid API key — streaming stopped.');
+            return null;
+        }
+        if (!r.ok) { setConn('error', 'Server error (' + r.status + ')'); return null; }
+        return r.json();
+    })
+    .then(data => {
+        if (!data) return;
+        sendCount++;
+        qkdActive = data.qkd_active || false;
+        // Update QKD badge dynamically on first encrypted packet
+        const badge    = document.getElementById('qkdBadge');
+        const animRow  = document.getElementById('qkdAnimRow');
+        if (badge && qkdActive) {
+            badge.textContent = '🔐 QKD Encrypted ✔';
+            badge.style.background = 'rgba(0,255,136,0.15)';
+            badge.style.color      = '#00ff88';
+            badge.style.border     = '1px solid rgba(0,255,136,0.3)';
+        }
+        if (animRow) animRow.style.display = qkdActive ? 'block' : 'none';
+        const label = qkdActive ? '🔐 QKD Streaming…' : 'Streaming…';
+        setConn('sending', label);
+        document.getElementById('sendCount').textContent = sendCount + ' sent';
+    })
+    .catch(err => {
+        setConn('error', 'Network error');
+    });
+}
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function txt(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+}
+
+function fmt(v) {
+    if (v == null || isNaN(v)) return '—';
+    return parseFloat(v).toFixed(2);
+}
+
+function setConn(state, label) {
+    const dot   = document.getElementById('connDot');
+    const lbl   = document.getElementById('connLabel');
+    const colors = { waiting: '#555', ready: '#ffc107', sending: '#00ff88', error: '#f44' };
+    dot.style.background   = colors[state] || '#555';
+    dot.style.boxShadow    = state === 'sending' ? '0 0 6px #00ff88' :
+                             state === 'error'   ? '0 0 6px #f44' : 'none';
+    if (label) lbl.textContent = label;
+}
+
+function showPermBanner() {
+    document.getElementById('permBanner').style.display = 'block';
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+setConn('waiting', 'Enter API key to start streaming');
+</script>
+</body>
+</html>

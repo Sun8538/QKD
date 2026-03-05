@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Quantum IoT Security{% endblock %}</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Animate.css -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --dark-bg: #0f0f23;
+            --card-bg: #1a1a2e;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent-green: #00ff88;
+            --accent-blue: #00b4d8;
+            --accent-purple: #764ba2;
+            --border-color: #2a2a4a;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Navbar Styles */
+        .navbar-custom {
+            background: rgba(15, 15, 35, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1rem 2rem;
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .navbar-brand i {
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .nav-link {
+            color: var(--text-secondary) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .nav-link:hover, .nav-link.active {
+            color: var(--text-primary) !important;
+            background: rgba(102, 126, 234, 0.1);
+        }
+        
+        /* Button Styles */
+        .btn-quantum {
+            background: var(--primary-gradient);
+            border: none;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-quantum:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+        
+        .btn-outline-quantum {
+            border: 2px solid #667eea;
+            color: #667eea;
+            background: transparent;
+            padding: 0.75rem 1.5rem;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-outline-quantum:hover {
+            background: var(--primary-gradient);
+            color: white;
+            border-color: transparent;
+        }
+        
+        /* Card Styles */
+        .card-quantum {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 15px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .card-quantum:hover {
+            border-color: #667eea;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.15);
+        }
+        
+        .card-header-quantum {
+            background: rgba(102, 126, 234, 0.1);
+            border-bottom: 1px solid var(--border-color);
+            padding: 1.25rem;
+        }
+        
+        /* Form Styles */
+        .form-control-quantum {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control-quantum:focus {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            color: var(--text-primary);
+        }
+        
+        .form-control-quantum::placeholder {
+            color: var(--text-secondary);
+        }
+        
+        /* Alert Styles */
+        .alert-quantum {
+            border-radius: 10px;
+            border: none;
+            padding: 1rem 1.25rem;
+        }
+        
+        .alert-success {
+            background: rgba(0, 255, 136, 0.1);
+            color: var(--accent-green);
+            border-left: 4px solid var(--accent-green);
+        }
+        
+        .alert-danger {
+            background: rgba(255, 77, 77, 0.1);
+            color: #ff4d4d;
+            border-left: 4px solid #ff4d4d;
+        }
+        
+        .alert-info {
+            background: rgba(0, 180, 216, 0.1);
+            color: var(--accent-blue);
+            border-left: 4px solid var(--accent-blue);
+        }
+        
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
+            border-left: 4px solid #ffc107;
+        }
+        
+        /* Quantum Effects */
+        .quantum-glow {
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.3),
+                        0 0 40px rgba(118, 75, 162, 0.2),
+                        0 0 60px rgba(0, 255, 136, 0.1);
+        }
+        
+        .quantum-text {
+            background: linear-gradient(135deg, #667eea, #764ba2, #00ff88);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: gradientShift 3s ease infinite;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        /* Code/Key Display */
+        .key-display {
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(135deg, #1a1a2e, #0f0f23);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 1rem;
+            color: var(--accent-green);
+            word-break: break-all;
+            font-size: 0.9rem;
+        }
+        
+        /* Table Styles */
+        .table-quantum {
+            color: var(--text-primary);
+            --bs-table-bg: transparent;
+            --bs-table-color: var(--text-primary);
+            --bs-table-striped-bg: transparent;
+            --bs-table-hover-bg: rgba(102, 126, 234, 0.08);
+        }
+        
+        .table-quantum thead th {
+            background: rgba(102, 126, 234, 0.15);
+            border-bottom: 2px solid #667eea;
+            font-weight: 700;
+            padding: 0.75rem;
+            color: #ffc107 !important;
+        }
+        
+        .table-quantum tbody td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 0.75rem;
+            vertical-align: middle;
+            color: #00ff88 !important;
+            background-color: transparent !important;
+        }
+        
+        .table-quantum tbody tr:hover {
+            background: rgba(102, 126, 234, 0.08);
+        }
+        
+        /* Badge Styles */
+        .badge-quantum {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 500;
+            font-size: 0.8rem;
+        }
+        
+        .badge-success { background: rgba(0, 255, 136, 0.2); color: var(--accent-green); }
+        .badge-warning { background: rgba(255, 193, 7, 0.2); color: #ffc107; }
+        .badge-danger { background: rgba(255, 77, 77, 0.2); color: #ff4d4d; }
+        .badge-info { background: rgba(0, 180, 216, 0.2); color: var(--accent-blue); }
+        .badge-primary { background: rgba(102, 126, 234, 0.2); color: #667eea; }
+        
+        /* Particle Background */
+        #particles-js {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+        }
+        
+        /* Footer */
+        .footer-quantum {
+            background: var(--card-bg);
+            border-top: 1px solid var(--border-color);
+            padding: 2rem 0;
+            margin-top: auto;
+        }
+        
+        /* Spinner */
+        .quantum-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(102, 126, 234, 0.2);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--dark-bg);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #667eea;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .navbar-custom {
+                padding: 0.75rem 1rem;
+            }
+            
+            .navbar-brand {
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-custom fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fas fa-atom"></i>
+                Quantum IoT Security
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    {% if session.get('user_id') %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('dashboard') }}">
+                            <i class="fas fa-tachometer-alt me-1"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('qkd_home') }}">
+                            <i class="fas fa-key me-1"></i> QKD Keys
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('channels_list') }}">
+                            <i class="fas fa-comments me-1"></i> Channels
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('private_chat_list') }}">
+                            <i class="fas fa-user-friends me-1"></i> Chats
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('files_list') }}">
+                            <i class="fas fa-folder-open me-1"></i> Files
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('scan_qr_code') }}">
+                            <i class="fas fa-qrcode me-1"></i> Scan QR
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('ai_assistant_page') }}">
+                            <i class="fas fa-robot me-1"></i> AI Assistant
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('iot_device_dashboard') }}">
+                            <i class="fas fa-microchip me-1"></i> IoT Devices
+                        </a>
+                    </li>
+                    <!-- Notification Bell -->
+                    <li class="nav-item dropdown" id="notificationDropdown">
+                        <a class="nav-link position-relative" href="#" id="notificationBell" role="button" 
+                           data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            <i class="fas fa-bell"></i>
+                            <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle d-none" 
+                                  id="notifBadge" style="font-size: 0.6rem; padding: 0.25rem 0.45rem;">0</span>
+                        </a>
+                        <div class="dropdown-menu dropdown-menu-end p-0" 
+                             style="background: var(--card-bg); border-color: var(--border-color); width: 340px; max-height: 420px; overflow: hidden;">
+                            <div class="d-flex justify-content-between align-items-center px-3 py-2" style="border-bottom: 1px solid var(--border-color);">
+                                <h6 class="mb-0 text-light"><i class="fas fa-bell me-2"></i>Notifications</h6>
+                                <button class="btn btn-sm btn-link text-info p-0" id="markAllReadBtn" title="Mark all as read">
+                                    <small>Mark all read</small>
+                                </button>
+                            </div>
+                            <div id="notificationsList" style="max-height: 360px; overflow-y: auto;">
+                                <div class="text-center py-4 text-secondary" id="noNotifications">
+                                    <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                    <p class="small mb-0">No new notifications</p>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" 
+                           data-bs-toggle="dropdown">
+                            <i class="fas fa-user-circle me-1"></i> {{ session.username }}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" style="background: var(--card-bg); border-color: var(--border-color);">
+                            <li><a class="dropdown-item text-light" href="{{ url_for('logout') }}">
+                                <i class="fas fa-sign-out-alt me-2"></i> Logout
+                            </a></li>
+                        </ul>
+                    </li>
+                    {% else %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('login') }}">
+                            <i class="fas fa-sign-in-alt me-1"></i> Login
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('register') }}">
+                            <i class="fas fa-user-plus me-1"></i> Register
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Flash Messages -->
+    <div class="container-fluid" style="margin-top: 80px;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-quantum alert-dismissible fade show animate__animated animate__fadeInDown" role="alert">
+                    {% if category == 'success' %}<i class="fas fa-check-circle me-2"></i>
+                    {% elif category == 'danger' %}<i class="fas fa-exclamation-circle me-2"></i>
+                    {% elif category == 'warning' %}<i class="fas fa-exclamation-triangle me-2"></i>
+                    {% else %}<i class="fas fa-info-circle me-2"></i>{% endif %}
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="pb-5">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer-quantum mt-5">
+        <div class="container text-center">
+            <p class="mb-2 text-secondary">
+                <i class="fas fa-shield-alt me-2"></i>
+                Secured by Quantum Key Distribution (BB84 Protocol)
+            </p>
+            <p class="mb-0 text-secondary small">
+                © 2026 Advanced Quantum Secured Platform | All Rights Reserved
+            </p>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function() {
+            $('.alert').alert('close');
+        }, 5000);
+        
+        // Add loading state to buttons (skip forms with onsubmit confirm dialogs)
+        $('form').on('submit', function(e) {
+            if (this.hasAttribute('onsubmit')) return;
+            $(this).find('button[type="submit"]').prop('disabled', true)
+                .html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+        });
+        
+        // ===== Notification System =====
+        {% if session.get('user_id') %}
+        (function() {
+            function getNotifIcon(type) {
+                const icons = {
+                    'join_request': 'fa-user-plus text-info',
+                    'join_approved': 'fa-check-circle text-success',
+                    'join_rejected': 'fa-times-circle text-danger',
+                    'file_request': 'fa-file-import text-warning',
+                    'file_approved': 'fa-file-check text-success',
+                    'file_rejected': 'fa-file-excel text-danger',
+                    'private_message_file': 'fa-paperclip text-info'
+                };
+                return icons[type] || 'fa-bell text-info';
+            }
+            
+            function timeAgo(dateStr) {
+                const now = new Date();
+                const date = new Date(dateStr);
+                const diff = Math.floor((now - date) / 1000);
+                if (diff < 60) return 'Just now';
+                if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+                if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+                return Math.floor(diff / 86400) + 'd ago';
+            }
+            
+            function fetchNotifications() {
+                $.get('/api/notifications', function(data) {
+                    if (!data.success) return;
+                    
+                    const count = data.count || 0;
+                    const badge = $('#notifBadge');
+                    
+                    if (count > 0) {
+                        badge.text(count > 9 ? '9+' : count).removeClass('d-none');
+                    } else {
+                        badge.addClass('d-none');
+                    }
+                    
+                    const list = $('#notificationsList');
+                    
+                    if (data.notifications && data.notifications.length > 0) {
+                        let html = '';
+                        data.notifications.forEach(function(n) {
+                            const icon = getNotifIcon(n.type);
+                            html += `
+                                <a href="${n.link || '#'}" class="d-flex align-items-start gap-2 px-3 py-2 text-decoration-none notification-item"
+                                   data-notif-id="${n.id}"
+                                   style="border-bottom: 1px solid var(--border-color); color: var(--text-primary); transition: background 0.2s;">
+                                    <div class="flex-shrink-0 mt-1">
+                                        <i class="fas ${icon}"></i>
+                                    </div>
+                                    <div class="flex-grow-1" style="min-width: 0;">
+                                        <div class="small fw-semibold">${n.title}</div>
+                                        <div class="small text-secondary text-truncate">${n.message}</div>
+                                        <div class="small text-secondary" style="font-size: 0.7rem;">${timeAgo(n.created_at)}</div>
+                                    </div>
+                                </a>`;
+                        });
+                        list.html(html);
+                    } else {
+                        list.html('<div class="text-center py-4 text-secondary"><i class="fas fa-check-circle fa-2x mb-2"></i><p class="small mb-0">No new notifications</p></div>');
+                    }
+                });
+            }
+            
+            // Mark single notification as read on click
+            $(document).on('click', '.notification-item', function() {
+                const notifId = $(this).data('notif-id');
+                $.post(`/api/notifications/mark-read/${notifId}`);
+            });
+            
+            // Mark all as read
+            $('#markAllReadBtn').click(function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $.post('/api/notifications/mark-all-read', function() {
+                    fetchNotifications();
+                });
+            });
+            
+            // Initial fetch + poll every 10 seconds
+            fetchNotifications();
+            setInterval(fetchNotifications, 10000);
+        })();
+        {% endif %}
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

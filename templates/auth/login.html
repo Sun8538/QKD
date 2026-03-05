@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Login - Quantum IoT Security{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card-quantum quantum-glow">
+                <div class="card-header-quantum text-center">
+                    <i class="fas fa-atom fa-3x mb-3" style="color: #667eea;"></i>
+                    <h3 class="mb-0">Welcome Back</h3>
+                    <p class="text-secondary mb-0 mt-2">Sign in to your quantum-secured account</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('login') }}">
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-envelope me-2"></i>Email Address
+                            </label>
+                            <input type="email" name="email" class="form-control form-control-quantum form-control-lg" 
+                                   placeholder="Enter your email" required>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="fas fa-lock me-2"></i>Password
+                            </label>
+                            <input type="password" name="password" class="form-control form-control-quantum form-control-lg" 
+                                   placeholder="Enter your password" required>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-quantum btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>Sign In
+                            </button>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-4">
+                        <p class="text-secondary mb-0">
+                            Don't have an account? 
+                            <a href="{{ url_for('register') }}" class="text-decoration-none" style="color: #667eea;">
+                                Create one
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <p class="text-secondary small">
+                    <i class="fas fa-shield-alt me-1"></i>
+                    Protected by Quantum Key Distribution
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
